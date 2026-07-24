@@ -34,6 +34,12 @@
             <span class="text-sm text-[color:var(--nx-muted)] tabular-nums">{{ $total }} · {{ $entryCount }} Einträge</span>
         </div>
 
+        @if($missingCount > 0)
+            <x-nx-callout variant="warning" title="Tage ohne erfasste Zeit" icon="heroicon-o-exclamation-triangle" class="mb-6">
+                {{ $missingCount }} Werktag(e) ohne Zeiterfassung: {{ $missingLabel }}
+            </x-nx-callout>
+        @endif
+
         @if(!$available)
             <x-nx-callout variant="neutral" title="Kein Organisations-Kontext">
                 Das organization-Modul liefert die Zeiten — hier ist es nicht verfügbar.

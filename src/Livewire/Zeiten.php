@@ -26,6 +26,10 @@ class Zeiten extends Component
     public string $amount = '0,00 €';
     public int $entryCount = 0;
 
+    /** Werktage im Zeitraum (bis gestern) ohne erfasste Zeit. */
+    public int $missingCount = 0;
+    public string $missingLabel = '';
+
     public function mount(): void
     {
         $this->load();
@@ -78,10 +82,34 @@ class Zeiten extends Component
 
         $this->days = $days;
         $this->entryCount = count($data['entries']);
+        $this->computeMissingWorkdays(array_keys($byDay));
         $this->total = $this->fmtHours((int) $data['total_minutes']);
         $this->billed = $this->fmtHours((int) $data['billed_minutes']);
         $this->open = $this->fmtHours((int) $data['open_minutes']);
         $this->amount = number_format(((int) $data['amount_cents']) / 100, 2, ',', '.') . ' €';
+    }
+
+    /**
+     * Werktage (Mo–Fr) im Zeitraum bis gestern, die keine erfasste Zeit haben.
+     */
+    protected function computeMissingWorkdays(array $datesWithTime): void
+    {
+        [$from, ] = $this->rangeDates();
+        $set = array_flip($datesWithTime);
+        $cursor = Carbon::parse($from);
+        $yesterday = now()->subDay()->startOfDay();
+
+        $labels = [];
+        while ($cursor->lte($yesterday)) {
+            if ($cursor->isWeekday() && !isset($set[$cursor->toDateString()])) {
+                $labels[] = $cursor->locale('de')->isoFormat('dd D.M.');
+            }
+            $cursor->addDay();
+        }
+
+        $this->missingCount = count($labels);
+        $this->missingLabel = implode(', ', array_slice($labels, 0, 12))
+            . (count($labels) > 12 ? ' …' : '');
     }
 
     protected function rangeDates(): array
