@@ -8,21 +8,17 @@
     </x-slot>
 
     <x-ui-page-container width="contained">
-        {{-- Begrüßung --}}
-        <div class="mb-8">
-            <h1 class="text-2xl font-semibold text-[color:var(--nx-text)]">
+        {{-- Kopf --}}
+        <div class="mb-10">
+            <h1 class="text-2xl font-semibold tracking-tight text-[color:var(--nx-text)]">
                 {{ $greeting }}{{ $firstName ? ', ' . $firstName : '' }}
             </h1>
-            @if($personName)
-                <p class="mt-1 text-sm text-[color:var(--nx-muted)]">
-                    Dein Überblick · verknüpft mit <span class="text-[color:var(--nx-text)]">{{ $personName }}</span>
-                </p>
-            @endif
+            <p class="mt-1 text-sm text-[color:var(--nx-muted)]">
+                Dein Überblick@if($personName) · <span class="text-[color:var(--nx-faint)]">verknüpft mit {{ $personName }}</span>@endif
+            </p>
         </div>
 
-        @php
-            $hasData = !empty($vitalSigns) || !empty($responsibilities);
-        @endphp
+        @php $hasData = !empty($vitalSigns) || !empty($responsibilities); @endphp
 
         @if(!$orgAvailable)
             <x-nx-callout variant="neutral" title="Kein Organisations-Kontext">
@@ -37,78 +33,78 @@
                 Alles ruhig — aktuell laufen keine Kennzahlen oder Zuständigkeiten auf deinen Knoten auf.
             </x-nx-empty>
         @else
-            <div class="space-y-8">
+            <div class="space-y-10">
                 {{-- Vital Signs --}}
-                @if(!empty($vitalSigns))
-                    <div class="space-y-5">
-                        @foreach($vitalSigns as $sectionKey => $metrics)
-                            @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
-                            <div>
-                                <div class="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
-                                    @svg('heroicon-o-' . ($cfg['icon'] ?? 'chart-bar'), 'w-4 h-4')
-                                    {{ $cfg['label'] ?? ucfirst($sectionKey) }}
-                                </div>
-                                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                                    @foreach($metrics as $m)
-                                        <x-nx-stat
-                                            :label="$m['label'] ?? ($m['key'] ?? '')"
-                                            :value="$m['value'] ?? 0"
-                                            :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
-                                            :accent="$this->accentFor($m['variant'] ?? 'default')" />
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
+                @foreach($vitalSigns as $sectionKey => $metrics)
+                    @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
+                    <x-nx-section
+                        :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
+                        :title="$cfg['label'] ?? ucfirst($sectionKey)"
+                        :description="$cfg['description'] ?? null">
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                            @foreach($metrics as $m)
+                                <x-nx-stat
+                                    :label="$m['label'] ?? ($m['key'] ?? '')"
+                                    :value="$m['value'] ?? 0"
+                                    :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
+                                    :accent="$this->accentFor($m['variant'] ?? 'default')" />
+                            @endforeach
+                        </div>
+                    </x-nx-section>
+                @endforeach
 
-                {{-- Responsibilities --}}
-                @if(!empty($responsibilities))
-                    <div class="space-y-5">
-                        @foreach($responsibilities as $sectionKey => $groups)
-                            @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
-                            <div>
-                                <div class="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
-                                    @svg('heroicon-o-' . ($cfg['icon'] ?? 'queue-list'), 'w-4 h-4')
-                                    {{ $cfg['label'] ?? ucfirst($sectionKey) }}
-                                </div>
+                {{-- Zuständigkeiten --}}
+                @foreach($responsibilities as $sectionKey => $groups)
+                    @php
+                        $cfg = $sectionConfigs[$sectionKey] ?? [];
+                        $sectionTotal = 0;
+                        foreach ($groups as $g) { $sectionTotal += $g['total_count'] ?? count($g['items'] ?? []); }
+                    @endphp
+                    <x-nx-section
+                        :icon="'heroicon-o-' . ($cfg['icon'] ?? 'queue-list')"
+                        :title="$cfg['label'] ?? ucfirst($sectionKey)"
+                        :hint="$sectionTotal ?: null"
+                        :description="$cfg['description'] ?? null">
+                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                            @foreach($groups as $group)
+                                @php
+                                    $items = $group['items'] ?? [];
+                                    $total = $group['total_count'] ?? count($items);
+                                    $more  = max(0, $total - count($items));
+                                @endphp
+                                <x-nx-card flush>
+                                    <div class="flex items-center justify-between gap-2 px-4 py-3">
+                                        <div class="flex items-center gap-2 text-sm font-semibold text-[color:var(--nx-text)]">
+                                            @svg('heroicon-o-' . ($group['icon'] ?? 'folder'), 'w-4 h-4 text-[color:var(--nx-muted)]')
+                                            {{ $group['label'] ?? '' }}
+                                        </div>
+                                        <x-nx-badge variant="neutral">{{ $total }}</x-nx-badge>
+                                    </div>
 
-                                <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                                    @foreach($groups as $group)
-                                        <x-nx-card flush>
-                                            <div class="flex items-center justify-between gap-2 px-4 py-3">
-                                                <div class="flex items-center gap-2 text-sm font-semibold text-[color:var(--nx-text)]">
-                                                    @svg('heroicon-o-' . ($group['icon'] ?? 'folder'), 'w-4 h-4 text-[color:var(--nx-muted)]')
-                                                    {{ $group['label'] ?? '' }}
-                                                </div>
-                                                <x-nx-badge variant="neutral">{{ $group['total_count'] ?? count($group['items'] ?? []) }}</x-nx-badge>
+                                    @if(empty($items))
+                                        <div class="px-4 pb-3 text-xs text-[color:var(--nx-faint)]">Nichts offen.</div>
+                                    @else
+                                        <ul class="divide-y divide-[color:var(--nx-line)] border-t border-[color:var(--nx-line)]">
+                                            @foreach($items as $item)
+                                                <li>
+                                                    <x-nx-list-item
+                                                        :title="$item['name'] ?? '—'"
+                                                        :meta="$item['meta'] ?? null"
+                                                        :href="$item['url'] ?? null" />
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                        @if($more > 0)
+                                            <div class="border-t border-[color:var(--nx-line)] px-4 py-2 text-xs text-[color:var(--nx-faint)]">
+                                                +{{ $more }} weitere
                                             </div>
-
-                                            @if(empty($group['items']))
-                                                <div class="px-4 pb-3 text-xs text-[color:var(--nx-faint)]">Nichts offen.</div>
-                                            @else
-                                                <ul class="divide-y divide-[color:var(--nx-line)] border-t border-[color:var(--nx-line)]">
-                                                    @foreach($group['items'] as $item)
-                                                        <li>
-                                                            @php $url = $item['url'] ?? null; @endphp
-                                                            <a @if($url) href="{{ $url }}" @endif
-                                                               class="flex items-center gap-3 px-4 py-2.5 transition-colors @if($url) hover:bg-[color:var(--nx-hover)] @endif">
-                                                                <span class="min-w-0 flex-1 truncate text-sm text-[color:var(--nx-text)]">{{ $item['name'] ?? '—' }}</span>
-                                                                @if(!empty($item['meta']))
-                                                                    <span class="shrink-0 text-xs text-[color:var(--nx-faint)]">{{ $item['meta'] }}</span>
-                                                                @endif
-                                                            </a>
-                                                        </li>
-                                                    @endforeach
-                                                </ul>
-                                            @endif
-                                        </x-nx-card>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
+                                        @endif
+                                    @endif
+                                </x-nx-card>
+                            @endforeach
+                        </div>
+                    </x-nx-section>
+                @endforeach
             </div>
         @endif
     </x-ui-page-container>
