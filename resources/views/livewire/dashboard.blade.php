@@ -45,7 +45,7 @@
                             @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
                             <div>
                                 <div class="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
-                                    @svg($cfg['icon'] ?? 'heroicon-o-chart-bar', 'w-4 h-4')
+                                    @svg('heroicon-o-' . ($cfg['icon'] ?? 'chart-bar'), 'w-4 h-4')
                                     {{ $cfg['label'] ?? ucfirst($sectionKey) }}
                                 </div>
                                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -53,7 +53,7 @@
                                         <x-nx-stat
                                             :label="$m['label'] ?? ($m['key'] ?? '')"
                                             :value="$m['value'] ?? 0"
-                                            :icon="$cfg['icon'] ?? 'heroicon-o-chart-bar'"
+                                            :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
                                             :accent="$this->accentFor($m['variant'] ?? 'default')" />
                                     @endforeach
                                 </div>
@@ -69,7 +69,7 @@
                             @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
                             <div>
                                 <div class="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
-                                    @svg($cfg['icon'] ?? 'heroicon-o-queue-list', 'w-4 h-4')
+                                    @svg('heroicon-o-' . ($cfg['icon'] ?? 'queue-list'), 'w-4 h-4')
                                     {{ $cfg['label'] ?? ucfirst($sectionKey) }}
                                 </div>
 
@@ -78,7 +78,7 @@
                                         <x-nx-card flush>
                                             <div class="flex items-center justify-between gap-2 px-4 py-3">
                                                 <div class="flex items-center gap-2 text-sm font-semibold text-[color:var(--nx-text)]">
-                                                    @svg($group['icon'] ?? 'heroicon-o-folder', 'w-4 h-4 text-[color:var(--nx-muted)]')
+                                                    @svg('heroicon-o-' . ($group['icon'] ?? 'folder'), 'w-4 h-4 text-[color:var(--nx-muted)]')
                                                     {{ $group['label'] ?? '' }}
                                                 </div>
                                                 <x-nx-badge variant="neutral">{{ $group['total_count'] ?? count($group['items'] ?? []) }}</x-nx-badge>
