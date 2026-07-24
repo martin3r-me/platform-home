@@ -1,0 +1,27 @@
+{
+    "name": "martin3r/platform-home",
+    "description": "Home – das persönliche Zuhause-Modul der Platform (Dashboard, später Kalender & Agenda). Spiegel von organization: die Ich-Sicht.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Platform Team",
+            "email": "team@platform.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Platform\\Home\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Platform\\Home\\HomeServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
