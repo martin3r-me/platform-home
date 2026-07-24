@@ -32,22 +32,4 @@ return [
         'icon'  => 'heroicon-o-home',
         'order' => 0,
     ],
-
-    /**
-     * Sidebar-Struktur des Moduls.
-     * (Das Dashboard rendert aktuell seine eigene Schnellzugriff-Sidebar inline;
-     *  hier stehen die Modul-Views, sobald Kalender/Agenda dazukommen.)
-     */
-    'sidebar' => [
-        [
-            'group' => 'Zuhause',
-            'items' => [
-                [
-                    'label' => 'Mein Tag',
-                    'route' => 'home.dashboard',
-                    'icon'  => 'heroicon-o-home',
-                ],
-            ],
-        ],
-    ],
 ];

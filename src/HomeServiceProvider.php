@@ -49,7 +49,6 @@ class HomeServiceProvider extends ServiceProvider
                 'routing'    => config('home.routing'),
                 'guard'      => config('home.guard'),
                 'navigation' => config('home.navigation'),
-                'sidebar'    => config('home.sidebar'),
             ]);
         }
 
