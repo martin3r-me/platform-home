@@ -57,14 +57,14 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
-    @if(!empty($modules))
-        <x-ui-sidebar-list label="Module">
-            @foreach($modules as $mod)
+    @foreach($moduleGroups as $group)
+        <x-ui-sidebar-list :label="$group['label']">
+            @foreach($group['modules'] as $mod)
                 <x-ui-sidebar-item :href="$mod['url']">
                     @svg($mod['icon'], 'w-4 h-4 shrink-0 text-[color:var(--nx-muted)]')
                     <span class="text-sm">{{ $mod['title'] }}</span>
                 </x-ui-sidebar-item>
             @endforeach
         </x-ui-sidebar-list>
-    @endif
+    @endforeach
 </div>

@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Route;
  */
 class Sidebar extends Component
 {
-    /** [ ['key','title','icon','url'], … ] – zugängliche Module, sortiert. */
-    public array $modules = [];
+    /** [ ['key','label','modules'=>[['key','title','icon','url'],…]], … ] – nach Gruppe. */
+    public array $moduleGroups = [];
 
     public function mount(): void
     {
@@ -27,7 +27,41 @@ class Sidebar extends Component
             return;
         }
 
-        $this->modules = $this->loadAccessibleModules($user, $user->currentTeamRelation);
+        $modules = $this->loadAccessibleModules($user, $user->currentTeamRelation);
+        $this->moduleGroups = $this->groupModules($modules);
+    }
+
+    /**
+     * Gruppiert die flache Modul-Liste nach Modul-Gruppe (Labels/Reihenfolge aus
+     * PlatformCore::getModuleGroups(); unbekannte Gruppen ans Ende).
+     */
+    protected function groupModules(array $modules): array
+    {
+        if (empty($modules)) {
+            return [];
+        }
+
+        $defs = PlatformCore::getModuleGroups();
+
+        $buckets = [];
+        foreach ($modules as $mod) {
+            $g = $mod['group'] ?: 'other';
+            $buckets[$g][] = $mod;
+        }
+
+        $out = [];
+        foreach ($buckets as $gkey => $mods) {
+            $out[] = [
+                'key'     => $gkey,
+                'label'   => $defs[$gkey]['label'] ?? ucfirst($gkey),
+                'order'   => $defs[$gkey]['order'] ?? 90,
+                'modules' => $mods,
+            ];
+        }
+
+        usort($out, fn ($a, $b) => $a['order'] <=> $b['order']);
+
+        return $out;
     }
 
     protected function loadAccessibleModules($user, $baseTeam): array
@@ -61,6 +95,7 @@ class Sidebar extends Component
                     'title' => $m['title'] ?? $m['label'] ?? ucfirst($m['key'] ?? ''),
                     'icon'  => $m['navigation']['icon'] ?? ($m['icon'] ?? 'heroicon-o-cube'),
                     'url'   => $url,
+                    'group' => $m['group'] ?? 'other',
                 ];
             })
             ->values()
