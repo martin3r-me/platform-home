@@ -3,10 +3,6 @@
         <x-ui-page-navbar title="Dashboard" icon="heroicon-o-squares-2x2" />
     </x-slot>
 
-    <x-slot name="sidebar">
-        @include('home::partials.sidebar')
-    </x-slot>
-
     <x-ui-page-container width="contained">
         {{-- Begrüßung --}}
         <div class="mb-8">

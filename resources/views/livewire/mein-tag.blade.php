@@ -3,10 +3,6 @@
         <x-ui-page-navbar title="Mein Tag" icon="heroicon-o-sun" />
     </x-slot>
 
-    <x-slot name="sidebar">
-        @include('home::partials.sidebar')
-    </x-slot>
-
     <x-ui-page-container width="contained">
         {{-- Begrüßung --}}
         <div class="mb-8 flex flex-wrap items-center justify-between gap-3">

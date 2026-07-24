@@ -7,10 +7,6 @@
         <x-ui-page-navbar :title="$title" :icon="$icon" />
     </x-slot>
 
-    <x-slot name="sidebar">
-        @include('home::partials.sidebar')
-    </x-slot>
-
     <x-ui-page-container width="contained">
         <x-nx-empty :icon="$icon">
             {{ $text }}
