@@ -116,51 +116,25 @@ class Dashboard extends Component
      */
     protected function loadTime(int $userId): void
     {
-        $teClass = \Platform\Organization\Models\OrganizationTimeEntry::class;
-        if (!class_exists($teClass)) {
+        // Über den organization-Service (Kontrakt) — home hängt nicht am Zeit-Modell.
+        $svcClass = \Platform\Organization\Services\PersonTimeSummary::class;
+        if (!class_exists($svcClass)) {
             return;
         }
 
-        $start = now()->subDays(6)->startOfDay();
+        $summary = resolve($svcClass)->lastDays($userId, 7);
+        $days = $summary['days'] ?? [];
 
-        // 7 Tage vorinitialisieren (ältester zuerst).
-        $byDay = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $d = now()->subDays($i);
-            $byDay[$d->toDateString()] = [
-                'label'   => $d->locale('de')->isoFormat('dd'),
-                'minutes' => 0,
-            ];
-        }
-
-        $rows = $teClass::query()
-            ->where('user_id', $userId)
-            ->whereBetween('work_date', [$start->toDateString(), now()->toDateString()])
-            ->get(['work_date', 'minutes', 'is_billed']);
-
-        $total = 0;
-        $billed = 0;
-        foreach ($rows as $r) {
-            $key = \Illuminate\Support\Carbon::parse($r->work_date)->toDateString();
-            $m = (int) ($r->minutes ?? 0);
-            if (isset($byDay[$key])) {
-                $byDay[$key]['minutes'] += $m;
-            }
-            $total += $m;
-            if ($r->is_billed) {
-                $billed += $m;
-            }
-        }
-
-        $this->timeMaxMinutes = max(array_map(fn ($d) => $d['minutes'], $byDay) ?: [0]);
+        $this->timeMaxMinutes = max(array_map(fn ($d) => (int) ($d['minutes'] ?? 0), $days) ?: [0]);
         $this->timeByDay = array_map(fn ($d) => [
-            'label'   => $d['label'],
-            'minutes' => $d['minutes'],
-            'hours'   => $this->fmtHours($d['minutes']),
-        ], array_values($byDay));
+            'label'   => \Illuminate\Support\Carbon::parse($d['date'])->locale('de')->isoFormat('dd'),
+            'minutes' => (int) ($d['minutes'] ?? 0),
+            'hours'   => $this->fmtHours((int) ($d['minutes'] ?? 0)),
+        ], $days);
 
+        $total = (int) ($summary['total_minutes'] ?? 0);
         $this->timeTotal = $this->fmtHours($total);
-        $this->timeBilled = $this->fmtHours($billed);
+        $this->timeBilled = $this->fmtHours((int) ($summary['billed_minutes'] ?? 0));
         $this->hasTime = $total > 0;
     }
 
