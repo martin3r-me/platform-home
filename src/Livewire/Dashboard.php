@@ -18,6 +18,9 @@ class Dashboard extends Component
     public string $firstName = '';
     public string $greeting = '';
 
+    /** Avatar-URL des Users (für die Kontext-Sidebar). */
+    public ?string $avatar = null;
+
     /** Ist ein Person-Knoten mit dem User verknüpft? */
     public bool $hasPerson = false;
 
@@ -45,6 +48,7 @@ class Dashboard extends Component
         $user = Auth::user();
         $this->firstName = trim(explode(' ', (string) $user->name)[0] ?? '');
         $this->greeting = $this->greetingForHour((int) now()->format('G'));
+        $this->avatar = $user->avatar ?? null;
 
         $teamId = $user->currentTeam?->id;
         if (!$teamId) {

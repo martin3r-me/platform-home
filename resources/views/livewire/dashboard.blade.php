@@ -4,7 +4,21 @@
     </x-slot>
 
     <x-slot name="sidebar">
-        @include('home::partials.inner-sidebar')
+        <x-ui-page-sidebar title="Kontext" icon="heroicon-o-identification" width="w-72" :defaultOpen="true" side="left">
+            <div class="space-y-6 p-4">
+                @if($hasPerson)
+                    <div class="flex items-center gap-3">
+                        <x-nx-avatar :name="$personName ?: $firstName" :src="$avatar" size="lg" />
+                        <div class="min-w-0">
+                            <div class="truncate text-sm font-semibold text-[color:var(--nx-text)]">{{ $personName ?: $firstName }}</div>
+                            <div class="text-xs text-[color:var(--nx-faint)]">Verantwortlich · dein Knoten</div>
+                        </div>
+                    </div>
+                @endif
+
+                @include('home::partials.quick-actions')
+            </div>
+        </x-ui-page-sidebar>
     </x-slot>
 
     <x-ui-page-container width="contained">
@@ -13,9 +27,7 @@
             <h1 class="text-2xl font-semibold tracking-tight text-[color:var(--nx-text)]">
                 {{ $greeting }}{{ $firstName ? ', ' . $firstName : '' }}
             </h1>
-            <p class="mt-1 text-sm text-[color:var(--nx-muted)]">
-                Dein Überblick@if($personName) · <span class="text-[color:var(--nx-faint)]">verknüpft mit {{ $personName }}</span>@endif
-            </p>
+            <p class="mt-1 text-sm text-[color:var(--nx-muted)]">Dein Überblick</p>
         </div>
 
         @php $hasData = !empty($vitalSigns) || !empty($responsibilities); @endphp
