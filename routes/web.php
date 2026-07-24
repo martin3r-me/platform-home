@@ -13,6 +13,7 @@ use Platform\Home\Livewire\MeinTag;
 use Platform\Home\Livewire\Agenda;
 use Platform\Home\Livewire\Checkin;
 use Platform\Home\Livewire\Kalender;
+use Platform\Home\Livewire\Zeiten;
 use Platform\Home\Livewire\Aufgaben;
 use Platform\Home\Livewire\Ziele;
 use Platform\Home\Livewire\Notizen;
@@ -27,6 +28,7 @@ Route::get('/checkin',  Checkin::class)->name('home.checkin');
 
 // Meins
 Route::get('/kalender', Kalender::class)->name('home.kalender');
+Route::get('/zeiten',   Zeiten::class)->name('home.zeiten');
 Route::get('/aufgaben', Aufgaben::class)->name('home.aufgaben');
 Route::get('/ziele',    Ziele::class)->name('home.ziele');
 Route::get('/notizen',  Notizen::class)->name('home.notizen');

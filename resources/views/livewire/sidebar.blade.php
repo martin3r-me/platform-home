@@ -28,6 +28,10 @@
             @svg('heroicon-o-calendar-days', 'w-4 h-4 shrink-0')
             <span class="text-sm">Kalender</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('home.zeiten')" :active="request()->routeIs('home.zeiten')">
+            @svg('heroicon-o-clock', 'w-4 h-4 shrink-0')
+            <span class="text-sm">Meine Zeiten</span>
+        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('home.aufgaben')" :active="request()->routeIs('home.aufgaben')">
             @svg('heroicon-o-clipboard-document-check', 'w-4 h-4 shrink-0')
             <span class="text-sm">Meine Aufgaben</span>
