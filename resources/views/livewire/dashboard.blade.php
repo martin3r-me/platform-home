@@ -114,12 +114,16 @@
                                 </div>
                                 <x-nx-button variant="ghost" size="sm" :href="route('home.zeiten')" wire:navigate>Details</x-nx-button>
                             </div>
-                            <div class="flex items-end gap-2" style="height: 64px;">
+                            <div class="flex items-end gap-2" style="height: 84px;">
                                 @foreach($timeByDay as $day)
                                     @php
                                         $barPx = $timeMaxMinutes > 0 ? max(3, (int) round($day['minutes'] / $timeMaxMinutes * 52)) : 3;
+                                        $dayHours = $day['minutes'] > 0
+                                            ? rtrim(rtrim(number_format($day['minutes'] / 60, 1, ',', ''), '0'), ',') . 'h'
+                                            : '';
                                     @endphp
                                     <div class="flex flex-1 flex-col items-center justify-end gap-1">
+                                        <span class="h-3 text-[10px] font-medium tabular-nums leading-none text-[color:var(--nx-muted)]">{{ $dayHours }}</span>
                                         <div class="w-full rounded-[3px] {{ $day['minutes'] > 0 ? 'bg-[color:var(--nx-accent)]' : 'bg-[color:var(--nx-accent-soft)]' }}" style="height: {{ $barPx }}px;"></div>
                                         <span class="text-[10px] uppercase text-[color:var(--nx-faint)]">{{ $day['label'] }}</span>
                                     </div>
