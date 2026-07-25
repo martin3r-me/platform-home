@@ -7,57 +7,70 @@ use Livewire\Component;
 /**
  * Eingang – die persönliche Inbox als Herzstück von HOME (3-Pane, nx-Stil).
  *
- * AKTUELL: klickbarer Prototyp mit Dummy-Daten (fühlen & klicken), noch keine
- * echte Anbindung. Inhalte folgen über den Inbox-Kontrakt (InboxItem, deliver()).
- *   - links:   Kanäle & Filter (setFilter)
- *   - rechts:  Item-Liste (selectItem)
+ * AKTUELL: klickbarer Prototyp mit Dummy-Daten. Zwei unabhängige Filter-Achsen,
+ * die kombinieren: Kanal (links) × Status (Toggle über der Liste).
+ *   - links:   Kanäle (setChannel)
+ *   - rechts:  Status-Toggle + Item-Liste (setStatus / selectItem)
  *   - Mitte:   Reading-Pane des ausgewählten Items
  */
 class Inbox extends Component
 {
     public ?int $selectedId = 1;
-    public string $filter = 'all';
+    public string $channel = 'all';
+    public string $status = 'all';
 
     public function selectItem(int $id): void
     {
         $this->selectedId = $id;
     }
 
-    public function setFilter(string $filter): void
+    public function setChannel(string $channel): void
     {
-        $this->filter = $filter;
+        $this->channel = $channel;
+    }
+
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
     }
 
     protected function matches(array $item): bool
     {
-        return match ($this->filter) {
-            'all'     => true,
+        $channelOk = $this->channel === 'all' || ($item['channel'] ?? '') === $this->channel;
+
+        $statusOk = match ($this->status) {
             'unread'  => (bool) ($item['unread'] ?? false),
             'snoozed' => ($item['status'] ?? '') === 'snoozed',
             'done'    => ($item['status'] ?? '') === 'done',
-            default   => ($item['channel'] ?? '') === $this->filter,
+            default   => true, // 'all'
         };
+
+        return $channelOk && $statusOk;
     }
 
-    /** Dummy-Kanäle/Filter mit Zählern. */
+    /** Kanäle (links) mit Zählern. */
     protected function channels(): array
     {
         return [
-            'eingang' => [
-                ['key' => 'all',     'label' => 'Alle',      'icon' => 'heroicon-o-inbox',         'count' => 7],
-                ['key' => 'unread',  'label' => 'Ungelesen', 'icon' => 'heroicon-o-envelope-open', 'count' => 3],
-                ['key' => 'snoozed', 'label' => 'Snoozed',   'icon' => 'heroicon-o-clock',         'count' => 1],
-                ['key' => 'done',    'label' => 'Erledigt',  'icon' => 'heroicon-o-check-circle',  'count' => null],
-            ],
-            'kanaele' => [
-                ['key' => 'mail',      'label' => 'E-Mail',   'icon' => 'heroicon-o-envelope',                  'count' => 3],
-                ['key' => 'meeting',   'label' => 'Meeting',  'icon' => 'heroicon-o-calendar-days',             'count' => 1],
-                ['key' => 'task',      'label' => 'Aufgabe',  'icon' => 'heroicon-o-clipboard-document-check',  'count' => 1],
-                ['key' => 'message',   'label' => 'Teams',    'icon' => 'heroicon-o-chat-bubble-left',          'count' => 1],
-                ['key' => 'call',      'label' => 'Anruf',    'icon' => 'heroicon-o-phone',                     'count' => null],
-                ['key' => 'recording', 'label' => 'Aufnahme', 'icon' => 'heroicon-o-microphone',                'count' => 1],
-                ['key' => 'system',    'label' => 'System',   'icon' => 'heroicon-o-bell',                      'count' => 1],
-            ],
+            ['key' => 'all',       'label' => 'Alle',      'icon' => 'heroicon-o-inbox',                    'count' => 7],
+            ['key' => 'mail',      'label' => 'E-Mail',    'icon' => 'heroicon-o-envelope',                 'count' => 3],
+            ['key' => 'meeting',   'label' => 'Meeting',   'icon' => 'heroicon-o-calendar-days',            'count' => 1],
+            ['key' => 'task',      'label' => 'Aufgabe',   'icon' => 'heroicon-o-clipboard-document-check', 'count' => 1],
+            ['key' => 'message',   'label' => 'Teams',     'icon' => 'heroicon-o-chat-bubble-left',         'count' => 1],
+            ['key' => 'call',      'label' => 'Anruf',     'icon' => 'heroicon-o-phone',                    'count' => null],
+            ['key' => 'recording', 'label' => 'Aufnahme',  'icon' => 'heroicon-o-microphone',               'count' => 1],
+            ['key' => 'system',    'label' => 'System',    'icon' => 'heroicon-o-bell',                     'count' => 1],
+        ];
+    }
+
+    /** Status-Achse (Toggle über der Liste). */
+    protected function statuses(): array
+    {
+        return [
+            ['key' => 'all',     'label' => 'Alle'],
+            ['key' => 'unread',  'label' => 'Ungelesen'],
+            ['key' => 'snoozed', 'label' => 'Snoozed'],
+            ['key' => 'done',    'label' => 'Erledigt'],
         ];
     }
 
@@ -115,7 +128,7 @@ class Inbox extends Component
             ],
             [
                 'id' => 7, 'channel' => 'system', 'channel_label' => 'System', 'icon' => 'heroicon-o-bell',
-                'sender' => 'Academy', 'time' => 'Mo', 'unread' => false, 'status' => 'new',
+                'sender' => 'Academy', 'time' => 'Mo', 'unread' => false, 'status' => 'done',
                 'subject' => 'Pflichtkurs fällig: KI-nativer Betrieb — Grundlagen',
                 'preview' => 'Fällig in 3 Tagen · Fortschritt 20 %',
                 'summary' => 'Pflichtkurs „KI-nativer Betrieb — Grundlagen" ist in 3 Tagen fällig, Fortschritt 20 %. Aktion: Kurs fortsetzen.',
@@ -139,6 +152,7 @@ class Inbox extends Component
 
         return view('home::livewire.inbox', [
             'channels' => $this->channels(),
+            'statuses' => $this->statuses(),
             'items'    => $filtered,
             'selected' => $selected,
         ])->layout('platform::layouts.app');
