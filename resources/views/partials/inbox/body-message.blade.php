@@ -13,11 +13,4 @@
             </div>
         @endforeach
     </div>
-
-    <div class="rounded-[8px] border border-[color:var(--nx-line)] p-3">
-        <div class="h-10 rounded-md bg-[color:var(--nx-hover)]"></div>
-        <div class="mt-2 flex justify-end">
-            <x-nx-button variant="primary" size="sm">Senden</x-nx-button>
-        </div>
-    </div>
 </div>

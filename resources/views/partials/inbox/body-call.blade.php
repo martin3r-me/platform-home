@@ -7,7 +7,6 @@
     </div>
 
     <div class="flex flex-wrap gap-2">
-        <x-nx-button variant="primary" size="sm">Rückruf</x-nx-button>
-        <x-nx-button variant="ghost" size="sm">Als Aufgabe</x-nx-button>
+        <x-nx-button variant="primary" size="sm">Als Aufgabe</x-nx-button>
     </div>
 </div>

@@ -20,14 +20,4 @@
             <div class="whitespace-pre-line text-sm leading-relaxed text-[color:var(--nx-text)]">{{ $m['body'] }}</div>
         </div>
     @endforeach
-
-    {{-- Antwort --}}
-    <div class="rounded-[8px] border border-[color:var(--nx-line)] p-3">
-        <div class="mb-2 text-xs text-[color:var(--nx-faint)]">Antwort an {{ $item['sender'] }}</div>
-        <div class="h-20 rounded-md bg-[color:var(--nx-hover)]"></div>
-        <div class="mt-2 flex justify-end gap-2">
-            <x-nx-button variant="ghost" size="sm">Weiterleiten</x-nx-button>
-            <x-nx-button variant="primary" size="sm">Senden</x-nx-button>
-        </div>
-    </div>
 </div>

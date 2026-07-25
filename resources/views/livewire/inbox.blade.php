@@ -78,19 +78,41 @@
                     <div class="mt-1 text-sm text-[color:var(--nx-muted)]">{{ $selected['sender'] }}</div>
                 </div>
 
-                {{-- Action-Bar (die Inbox-Superkraft) --}}
+                {{-- Action-Bar: triagieren & daraus Arbeit machen (kein Antworten) --}}
                 <div class="flex flex-wrap gap-2">
                     <x-nx-button variant="primary" size="sm">Erledigt</x-nx-button>
                     <x-nx-button variant="secondary" size="sm">Snooze</x-nx-button>
                     <x-nx-button variant="secondary" size="sm">→ Aufgabe</x-nx-button>
                     <x-nx-button variant="secondary" size="sm">→ Ticket</x-nx-button>
-                    <x-nx-button variant="secondary" size="sm">An Knoten</x-nx-button>
-                    <x-nx-button variant="secondary" size="sm">Antworten</x-nx-button>
                 </div>
 
                 <x-nx-callout variant="info" title="KI-Zusammenfassung">
                     {{ $selected['summary'] }}
                 </x-nx-callout>
+
+                {{-- Org-Kontext: wo hängt's, was noch dran — der eigentliche Kern --}}
+                <x-nx-card>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
+                            @svg('heroicon-o-share', 'w-4 h-4')
+                            Kontext
+                        </div>
+                        <x-nx-button variant="ghost" size="sm">An Knoten hängen</x-nx-button>
+                    </div>
+                    @if(!empty($selected['context']))
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            @foreach($selected['context'] as $ctx)
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--nx-accent-soft)] px-2 py-1 text-xs text-[color:var(--nx-text)]">
+                                    @svg($ctx['icon'], 'h-3.5 w-3.5 text-[color:var(--nx-muted)]')
+                                    {{ $ctx['label'] }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @endif
+                    @if($selected['related'])
+                        <div class="mt-2 text-xs text-[color:var(--nx-faint)]">Am Knoten: {{ $selected['related'] }}</div>
+                    @endif
+                </x-nx-card>
 
                 {{-- Kanal-spezifischer Body --}}
                 @switch($selected['channel'])

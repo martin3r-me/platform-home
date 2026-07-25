@@ -171,6 +171,24 @@ class Inbox extends Component
         ];
     }
 
+    /**
+     * Org-Kontext je Item (an welchen Knoten hängt es, was noch dranhängt) — der Kern:
+     * Dinge in die Organisation hängen und Kontext ziehen, nicht kommunizieren.
+     */
+    protected function contexts(): array
+    {
+        return [
+            1 => ['chips' => [['label' => 'Konstantin Broich', 'icon' => 'heroicon-o-user'], ['label' => 'Rheingedeck', 'icon' => 'heroicon-o-building-storefront']], 'related' => '3 offene Aufgaben · Angebot #12'],
+            2 => ['chips' => [['label' => 'Digital Service Theke', 'icon' => 'heroicon-o-rectangle-group'], ['label' => 'Change CP-001', 'icon' => 'heroicon-o-arrows-right-left']], 'related' => 'Change aktiv · 4 Meilensteine'],
+            3 => ['chips' => [['label' => 'IT-Support', 'icon' => 'heroicon-o-lifebuoy']], 'related' => 'Ticket #142 · Board IT-Support'],
+            4 => ['chips' => [['label' => 'Syltjunkie', 'icon' => 'heroicon-o-building-storefront']], 'related' => 'Neukunde · noch kein Projekt'],
+            5 => ['chips' => [['label' => 'IT / Infrastruktur', 'icon' => 'heroicon-o-server-stack']], 'related' => 'MDM-Rollout'],
+            6 => ['chips' => [['label' => 'Buchhaltung', 'icon' => 'heroicon-o-banknotes']], 'related' => 'Kontierung HGK'],
+            7 => ['chips' => [['label' => 'Academy', 'icon' => 'heroicon-o-academic-cap']], 'related' => 'Pflichtkurs'],
+            8 => ['chips' => [['label' => 'Philip Weber', 'icon' => 'heroicon-o-user']], 'related' => 'Marketing'],
+        ];
+    }
+
     public function render()
     {
         $all = $this->items();
@@ -182,6 +200,12 @@ class Inbox extends Component
                 $selected = $it;
                 break;
             }
+        }
+
+        if ($selected) {
+            $ctx = $this->contexts()[$selected['id']] ?? [];
+            $selected['context'] = $ctx['chips'] ?? [];
+            $selected['related'] = $ctx['related'] ?? null;
         }
 
         return view('home::livewire.inbox', [
