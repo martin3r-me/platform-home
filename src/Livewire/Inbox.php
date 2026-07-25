@@ -62,6 +62,30 @@ class Inbox extends Component
     }
 
     /**
+     * Erledigt: triagiert → raus aus dem Eingang. Setzt den Inbox-Status auf Done;
+     * listForUser zieht nur 'new', also verschwindet das Item. Meeting, Knoten-Link
+     * und Zeit-Buchung bleiben bestehen (MaterializeMeetingTime filtert nicht nach
+     * Inbox-Status).
+     */
+    public function markDone(): void
+    {
+        $item = $this->currentInboxItem();
+        if (!$item) {
+            return;
+        }
+        try {
+            $item->status = \Platform\Inbox\Enums\InboxItemStatus::Done;
+            $item->save();
+        } catch (\Throwable $e) {
+            // still
+        }
+
+        // Item ist raus → Auswahl leeren, nächster wird rechts gewählt.
+        $this->selectedId = null;
+        $this->nodeQuery = '';
+    }
+
+    /**
      * Item an einen Org-Knoten hängen — der Kern der Inbox: Dinge in die
      * Organisation hängen. Ist das Item schon promotet, hängt auch das Meeting an
      * denselben Knoten (Wissen fließt in den Puls; Zeit läuft separat übers Item).

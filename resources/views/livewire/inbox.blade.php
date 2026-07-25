@@ -95,7 +95,7 @@
 
                 {{-- Action-Bar: triagieren & daraus Arbeit machen (kein Antworten) --}}
                 <div class="flex flex-wrap gap-2">
-                    <x-nx-button variant="primary" size="sm">Erledigt</x-nx-button>
+                    <x-nx-button variant="primary" size="sm" wire:click="markDone" wire:loading.attr="disabled">Erledigt</x-nx-button>
                     <x-nx-button variant="secondary" size="sm">Snooze</x-nx-button>
                     <x-nx-button variant="secondary" size="sm">→ Aufgabe</x-nx-button>
                     <x-nx-button variant="secondary" size="sm">→ Ticket</x-nx-button>
