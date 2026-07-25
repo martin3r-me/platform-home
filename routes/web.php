@@ -16,6 +16,7 @@ use Platform\Home\Livewire\Kalender;
 use Platform\Home\Livewire\Zeiten;
 use Platform\Home\Livewire\Aufgaben;
 use Platform\Home\Livewire\Ziele;
+use Platform\Home\Livewire\Kurse;
 use Platform\Home\Livewire\Notizen;
 use Platform\Home\Livewire\Benachrichtigungen;
 use Platform\Home\Livewire\Profil;
@@ -31,6 +32,7 @@ Route::get('/kalender', Kalender::class)->name('home.kalender');
 Route::get('/zeiten',   Zeiten::class)->name('home.zeiten');
 Route::get('/aufgaben', Aufgaben::class)->name('home.aufgaben');
 Route::get('/ziele',    Ziele::class)->name('home.ziele');
+Route::get('/kurse',    Kurse::class)->name('home.kurse');
 Route::get('/notizen',  Notizen::class)->name('home.notizen');
 
 // Konto

@@ -40,6 +40,10 @@
             @svg('heroicon-o-flag', 'w-4 h-4 shrink-0')
             <span class="text-sm">Meine Ziele</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('home.kurse')" :active="request()->routeIs('home.kurse')">
+            @svg('heroicon-o-academic-cap', 'w-4 h-4 shrink-0')
+            <span class="text-sm">Meine Kurse</span>
+        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('home.notizen')" :active="request()->routeIs('home.notizen')">
             @svg('heroicon-o-pencil-square', 'w-4 h-4 shrink-0')
             <span class="text-sm">Notizen</span>
