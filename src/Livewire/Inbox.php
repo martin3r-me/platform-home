@@ -210,6 +210,7 @@ class Inbox extends Component
             ['key' => 'mail',      'label' => 'E-Mail',    'icon' => 'heroicon-o-envelope'],
             ['key' => 'meeting',   'label' => 'Meeting',   'icon' => 'heroicon-o-calendar-days'],
             ['key' => 'task',      'label' => 'Aufgabe',   'icon' => 'heroicon-o-clipboard-document-check'],
+            ['key' => 'ticket',    'label' => 'Ticket',    'icon' => 'heroicon-o-lifebuoy'],
             ['key' => 'message',   'label' => 'Teams',     'icon' => 'heroicon-o-chat-bubble-left'],
             ['key' => 'call',      'label' => 'Anruf',     'icon' => 'heroicon-o-phone'],
             ['key' => 'recording', 'label' => 'Aufnahme',  'icon' => 'heroicon-o-microphone'],
@@ -502,6 +503,41 @@ class Inbox extends Component
         ], $rows);
     }
 
+    /** Echte Ticket-Items (mir zugewiesen) über den Inbox-Kontrakt. */
+    protected function realTickets(): array
+    {
+        $contract = \Platform\Inbox\Contracts\InboxTicketQueryContract::class;
+        if (!interface_exists($contract)) {
+            return [];
+        }
+
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+
+        try {
+            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_map(fn ($m) => [
+            'id'            => 50000 + (int) $m['id'],   // eigener ID-Raum (Tickets)
+            'inbox_id'      => (int) $m['id'],
+            'real'          => true,
+            'channel'       => 'ticket',
+            'channel_label' => 'Ticket',
+            'icon'          => 'heroicon-o-lifebuoy',
+            'sender'        => $m['sender'] ?? 'Zugewiesen',
+            'subject'       => $m['subject'] ?? '',
+            'preview'       => $m['preview'] ?? '',
+            'time'          => $m['time'] ?? '',
+            'unread'        => (bool) ($m['unread'] ?? true),
+            'status'        => 'new',
+        ], $rows);
+    }
+
     /** Die gemergte Gesamtliste (echte Items + Dummies), ungefiltert. */
     protected function mergedItems(): array
     {
@@ -514,6 +550,7 @@ class Inbox extends Component
             'mail'    => $this->realMails(),
             'call'    => $this->realCalls(),
             'task'    => $this->realTasks(),
+            'ticket'  => $this->realTickets(),
         ] as $channel => $real) {
             if (!empty($real)) {
                 $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== $channel));
@@ -559,6 +596,7 @@ class Inbox extends Component
                 'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
                 'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
                 'task'    => \Platform\Inbox\Contracts\InboxTaskQueryContract::class,
+                'ticket'  => \Platform\Inbox\Contracts\InboxTicketQueryContract::class,
                 default   => null,
             };
             if ($contract && interface_exists($contract)) {

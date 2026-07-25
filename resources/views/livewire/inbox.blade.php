@@ -188,6 +188,9 @@
                     @case('task')
                         @include('home::partials.inbox.body-task', ['item' => $selected])
                     @break
+                    @case('ticket')
+                        @include('home::partials.inbox.body-ticket', ['item' => $selected])
+                    @break
                     @case('call')
                         @include('home::partials.inbox.body-call', ['item' => $selected])
                     @break

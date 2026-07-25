@@ -24,4 +24,14 @@
             </ul>
         </div>
     @endif
+
+    {{-- Deep-Link zur Aufgabe (loose: Route-Name + id, guarded) --}}
+    @if(!empty($item['task_id']) && \Illuminate\Support\Facades\Route::has('planner.tasks.show'))
+        <div class="flex flex-wrap gap-2">
+            <x-nx-button variant="primary" size="sm" :href="route('planner.tasks.show', $item['task_id'])">
+                @svg('heroicon-o-arrow-top-right-on-square', 'h-4 w-4')
+                Aufgabe öffnen
+            </x-nx-button>
+        </div>
+    @endif
 </div>
