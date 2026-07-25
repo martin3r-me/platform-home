@@ -198,6 +198,19 @@
                         </x-nx-section>
                     @endforeach
                 @endif
+
+                {{-- Platzhalter: Beteiligung kommt über die Graph-Policy (in Arbeit) --}}
+                <x-nx-section icon="heroicon-o-arrows-right-left" title="Changes" description="Change-Prozesse, an denen du beteiligt bist">
+                    <x-nx-empty icon="heroicon-o-arrows-right-left">
+                        Platzhalter — folgt über die Graph-Policy (Beteiligung an Knoten & Eltern-Einheiten).
+                    </x-nx-empty>
+                </x-nx-section>
+
+                <x-nx-section icon="heroicon-o-share" title="Prozesse" description="Prozesse, an denen du beteiligt bist">
+                    <x-nx-empty icon="heroicon-o-share">
+                        Platzhalter — folgt über die Graph-Policy (Beteiligung an Knoten & Eltern-Einheiten).
+                    </x-nx-empty>
+                </x-nx-section>
             @endif
         </div>
     </x-ui-page-container>
