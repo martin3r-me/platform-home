@@ -81,6 +81,12 @@ class Inbox extends Component
             if ($item->meeting_id && class_exists($bridge)) {
                 $bridge::createLink($entityId, 'meeting', (int) $item->meeting_id);
             }
+
+            // Auto-Propagation: derselbe Termin (iCalUId) hängt für ALLE gesyncten
+            // Beteiligten am selben Knoten → jede/r bucht dort automatisch die Zeit.
+            if (!empty($item->ical_uid)) {
+                app($svc)->linkSiblingsByIcalUid($item, $entityId);
+            }
         } catch (\Throwable $e) {
             // Organization nicht verfügbar → still, Kontext bleibt leer.
         }
@@ -94,13 +100,20 @@ class Inbox extends Component
         if (!$item) {
             return;
         }
+        $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
         try {
-            app(\Platform\Inbox\Services\InboxEntityLinkService::class)->unlink($item, $entityId);
+            app($svc)->unlink($item, $entityId);
 
             // Symmetrisch zu attachNode: auch das Meeting vom Knoten lösen.
             $bridge = \Platform\Organization\Services\EntityDimensionBridge::class;
             if ($item->meeting_id && class_exists($bridge)) {
                 $bridge::deleteLink($entityId, 'meeting', (int) $item->meeting_id);
+            }
+
+            // Auto-Propagation zurücknehmen: der Termin wandert für ALLE Beteiligten
+            // vom Knoten weg.
+            if (!empty($item->ical_uid)) {
+                app($svc)->unlinkSiblingsByIcalUid($item, $entityId);
             }
         } catch (\Throwable $e) {
             // still
