@@ -101,9 +101,10 @@ class Dashboard extends Component
             return;
         }
 
+        // Dashboard = Orientierung: nur Kennzahlen (Vital Signs), keine Detail-Listen.
+        // Die Zuständigkeits-Listen leben auf den eigenen Seiten (Meine Aufgaben/Kurse/…).
         $this->sectionConfigs = $registry->allSectionConfigs();
         $this->vitalSigns = $registry->allVitalSigns($user->id, $teamId);
-        $this->responsibilities = $registry->allResponsibilities($user->id, $teamId, 5);
     }
 
     /**
