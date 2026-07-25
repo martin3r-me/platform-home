@@ -127,6 +127,25 @@ class Dashboard extends Component
     }
 
     /**
+     * Ziel-Detailseite für die KPIs eines Providers (Orientierung → Tiefe).
+     * Guarded: unbekannte/fehlende Routen → null (KPI dann nicht klickbar).
+     */
+    public function kpiHref(string $sectionKey): ?string
+    {
+        $map = [
+            'academy'  => 'home.kurse',
+            'planner'  => 'planner.my-tasks',
+            'helpdesk' => 'helpdesk.dashboard',
+        ];
+
+        $route = $map[$sectionKey] ?? null;
+
+        return $route && \Illuminate\Support\Facades\Route::has($route)
+            ? route($route)
+            : null;
+    }
+
+    /**
      * Accent-Farbe (CSS) für eine Metrik-Variante.
      */
     public function accentFor(string $variant): ?string

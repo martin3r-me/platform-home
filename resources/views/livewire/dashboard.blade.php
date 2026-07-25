@@ -92,7 +92,8 @@
                                         :label="$m['label'] ?? ''"
                                         :value="$m['value'] ?? 0"
                                         :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
-                                        :accent="$this->accentFor($m['variant'] ?? 'default')" />
+                                        :accent="$this->accentFor($m['variant'] ?? 'default')"
+                                        :href="$this->kpiHref($sectionKey)" />
                                 @endforeach
                             @endforeach
                         </div>
