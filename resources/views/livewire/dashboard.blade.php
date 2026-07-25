@@ -85,6 +85,30 @@
                 </x-nx-card>
             @endif
 
+            {{-- Changes & Prozesse — Beteiligung folgt über die Graph-Policy (kompakter Platzhalter) --}}
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <x-nx-card>
+                    <div class="flex items-center gap-2">
+                        @svg('heroicon-o-arrows-right-left', 'w-4 h-4 shrink-0 text-[color:var(--nx-muted)]')
+                        <span class="text-sm font-semibold text-[color:var(--nx-text)]">Changes</span>
+                        <span class="ml-auto"><x-nx-badge variant="neutral">bald</x-nx-badge></span>
+                    </div>
+                    <p class="mt-2 text-xs leading-relaxed text-[color:var(--nx-faint)]">
+                        Kotter-Change-Prozesse an deinen Einheiten — welche Transformation gerade ansteht, mit Phase &amp; Fortschritt. Erscheint, sobald die Beteiligung über den Graphen steht.
+                    </p>
+                </x-nx-card>
+                <x-nx-card>
+                    <div class="flex items-center gap-2">
+                        @svg('heroicon-o-share', 'w-4 h-4 shrink-0 text-[color:var(--nx-muted)]')
+                        <span class="text-sm font-semibold text-[color:var(--nx-text)]">Prozesse</span>
+                        <span class="ml-auto"><x-nx-badge variant="neutral">bald</x-nx-badge></span>
+                    </div>
+                    <p class="mt-2 text-xs leading-relaxed text-[color:var(--nx-faint)]">
+                        Abläufe, an denen du beteiligt bist — laufende Durchläufe und dein nächster Schritt. Erscheint, sobald die Beteiligung über den Graphen steht.
+                    </p>
+                </x-nx-card>
+            </div>
+
             {{-- Org-gespeiste Inhalte --}}
             @if(!$orgAvailable)
                 <x-nx-callout variant="neutral" title="Kein Organisations-Kontext">
@@ -198,19 +222,6 @@
                         </x-nx-section>
                     @endforeach
                 @endif
-
-                {{-- Platzhalter: Beteiligung kommt über die Graph-Policy (in Arbeit) --}}
-                <x-nx-section icon="heroicon-o-arrows-right-left" title="Changes" description="Change-Prozesse, an denen du beteiligt bist">
-                    <x-nx-empty icon="heroicon-o-arrows-right-left">
-                        Platzhalter — folgt über die Graph-Policy (Beteiligung an Knoten & Eltern-Einheiten).
-                    </x-nx-empty>
-                </x-nx-section>
-
-                <x-nx-section icon="heroicon-o-share" title="Prozesse" description="Prozesse, an denen du beteiligt bist">
-                    <x-nx-empty icon="heroicon-o-share">
-                        Platzhalter — folgt über die Graph-Policy (Beteiligung an Knoten & Eltern-Einheiten).
-                    </x-nx-empty>
-                </x-nx-section>
             @endif
         </div>
     </x-ui-page-container>
