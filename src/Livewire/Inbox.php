@@ -385,19 +385,64 @@ class Inbox extends Component
         ], $rows);
     }
 
-    /** Die gemergte Gesamtliste (Dummies + echte Meetings), ungefiltert. */
+    /**
+     * Echte Mail-Items über den Inbox-Kontrakt (quellfrei, neueste zuerst).
+     * Fehlt Inbox/Team/Daten → leer, dann bleiben die Dummy-Mails.
+     */
+    protected function realMails(): array
+    {
+        $contract = \Platform\Inbox\Contracts\InboxMailQueryContract::class;
+        if (!interface_exists($contract)) {
+            return [];
+        }
+
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+
+        try {
+            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_map(fn ($m) => [
+            'id'            => 20000 + (int) $m['id'],   // eigener ID-Raum (Mails), kollidiert nicht
+            'inbox_id'      => (int) $m['id'],
+            'real'          => true,
+            'channel'       => 'mail',
+            'channel_label' => 'E-Mail',
+            'icon'          => 'heroicon-o-envelope',
+            'sender'        => $m['sender'] ?? 'Unbekannt',
+            'subject'       => $m['subject'] ?? '',
+            'preview'       => $m['preview'] ?? '',
+            'time'          => $m['time'] ?? '',
+            'unread'        => (bool) ($m['unread'] ?? true),
+            'status'        => 'new',
+        ], $rows);
+    }
+
+    /** Die gemergte Gesamtliste (echte Items + Dummies), ungefiltert. */
     protected function mergedItems(): array
     {
         $all = $this->items();
+        $prepend = [];
 
-        // Meeting-Kanal echt: Dummy-Meetings durch echte ersetzen (falls vorhanden).
-        $real = $this->realMeetings();
-        if (!empty($real)) {
+        // Je Kanal: Dummies durch echte Items ersetzen (falls vorhanden).
+        $realMeetings = $this->realMeetings();
+        if (!empty($realMeetings)) {
             $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'meeting'));
-            $all = array_merge($real, $all);
+            $prepend = array_merge($prepend, $realMeetings);
         }
 
-        return $all;
+        $realMails = $this->realMails();
+        if (!empty($realMails)) {
+            $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'mail'));
+            $prepend = array_merge($prepend, $realMails);
+        }
+
+        return array_merge($prepend, $all);
     }
 
     /** Vorselektion: das erste Item der aktuellen Kanal/Status-Ansicht wählen. */
@@ -428,15 +473,22 @@ class Inbox extends Component
             }
         }
 
-        if ($selected && ($selected['real'] ?? false) && ($selected['channel'] ?? '') === 'meeting') {
-            try {
-                $detail = app(\Platform\Inbox\Contracts\InboxMeetingQueryContract::class)
-                    ->detailForItem((int) $selected['inbox_id']);
-                if ($detail) {
-                    $selected = array_merge($selected, $detail);
+        if ($selected && ($selected['real'] ?? false)) {
+            // Kanal-spezifisches Detail (Meeting-Agenda/Thread) nachladen.
+            $contract = match ($selected['channel'] ?? '') {
+                'meeting' => \Platform\Inbox\Contracts\InboxMeetingQueryContract::class,
+                'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
+                default   => null,
+            };
+            if ($contract && interface_exists($contract)) {
+                try {
+                    $detail = app($contract)->detailForItem((int) $selected['inbox_id']);
+                    if ($detail) {
+                        $selected = array_merge($selected, $detail);
+                    }
+                } catch (\Throwable $e) {
+                    // Detail nicht verfügbar → Basisdaten aus der Liste bleiben.
                 }
-            } catch (\Throwable $e) {
-                // Detail nicht verfügbar → Basisdaten aus der Liste bleiben.
             }
         } elseif ($selected) {
             $ctx = $this->contexts()[$selected['id']] ?? [];
