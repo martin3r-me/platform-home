@@ -41,7 +41,14 @@
                 <x-nx-empty icon="heroicon-o-check-circle">Nichts hier — sauber.</x-nx-empty>
             @else
                 <ul class="divide-y divide-[color:var(--nx-line)]">
+                    @php $prevSection = null; @endphp
                     @foreach($items as $it)
+                        @if(!empty($it['section']) && $it['section'] !== $prevSection)
+                            @php $prevSection = $it['section']; @endphp
+                            <li class="bg-[color:var(--nx-bg-soft,transparent)] px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--nx-faint)]">
+                                {{ $it['section'] === 'upcoming' ? 'Anstehend' : 'Vergangen' }}
+                            </li>
+                        @endif
                         <li>
                             <button type="button" wire:click="selectItem({{ $it['id'] }})"
                                     class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors {{ $selected && $selected['id'] === $it['id'] ? 'bg-[color:var(--nx-active)]' : 'hover:bg-[color:var(--nx-hover)]' }}">
@@ -52,7 +59,15 @@
                                         <span class="shrink-0 text-[10px] tabular-nums text-[color:var(--nx-faint)]">{{ $it['time'] }}</span>
                                     </div>
                                     <div class="truncate text-sm text-[color:var(--nx-text)]">{{ $it['subject'] }}</div>
-                                    <div class="truncate text-xs text-[color:var(--nx-faint)]">{{ $it['preview'] }}</div>
+                                    <div class="mt-0.5 flex items-center gap-2">
+                                        @if(!empty($it['is_series']))
+                                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color:var(--nx-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--nx-muted)]">
+                                                @svg('heroicon-o-arrow-path', 'h-3 w-3')
+                                                Serie{{ ($it['series_count'] ?? 1) > 1 ? ' · ' . $it['series_count'] : '' }}
+                                            </span>
+                                        @endif
+                                        <span class="truncate text-xs text-[color:var(--nx-faint)]">{{ $it['preview'] }}</span>
+                                    </div>
                                 </div>
                                 @if($it['unread'])
                                     <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[color:var(--nx-accent)]"></span>

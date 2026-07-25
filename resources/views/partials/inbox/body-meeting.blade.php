@@ -2,18 +2,24 @@
 <div class="space-y-4">
     {{-- Roter Faden: Kalender-Termin → vollwertiges Meeting → Zeiten-Tracking --}}
     @if($item['real'] ?? false)
+        @php $isSeries = $item['is_series'] ?? false; $seriesN = $item['series_count'] ?? 1; @endphp
         @if(empty($item['meeting_id']))
-            <x-nx-callout variant="info" icon="heroicon-o-calendar-days" title="Noch kein echtes Meeting">
-                Mach daraus ein vollwertiges Meeting — mit pflegbarer Agenda. Sobald es an einem
-                Org-Knoten hängt, werden die Zeiten automatisch getrackt.
+            <x-nx-callout variant="info" icon="heroicon-o-calendar-days" title="{{ $isSeries ? 'Serie · noch kein Meeting' : 'Noch kein echtes Meeting' }}">
+                @if($isSeries)
+                    Termin einer Serie{{ $seriesN > 1 ? ' (' . $seriesN . ' offene Vorkommen)' : '' }}. Klink die <strong>ganze Serie</strong> als ein Meeting ein —
+                    alle Vorkommen docken an. Sobald es an einem Org-Knoten hängt, werden die Zeiten automatisch getrackt.
+                @else
+                    Mach daraus ein vollwertiges Meeting — mit pflegbarer Agenda. Sobald es an einem
+                    Org-Knoten hängt, werden die Zeiten automatisch getrackt.
+                @endif
                 <x-slot name="action">
                     <x-nx-button variant="primary" size="sm" icon="heroicon-o-sparkles" wire:click="promoteMeeting" wire:loading.attr="disabled">
-                        Zu Meeting machen
+                        {{ $isSeries ? 'Serie einklinken' : 'Zu Meeting machen' }}
                     </x-nx-button>
                 </x-slot>
             </x-nx-callout>
         @else
-            <x-nx-callout variant="success" icon="heroicon-o-check-circle" title="Echtes Meeting">
+            <x-nx-callout variant="success" icon="heroicon-o-check-circle" title="{{ $isSeries ? 'Serie eingeklinkt' : 'Echtes Meeting' }}">
                 Agenda &amp; Notizen sind im meetings-Workspace pflegbar. An einem Org-Knoten werden die Zeiten getrackt.
                 @if(\Illuminate\Support\Facades\Route::has('meetings.show'))
                     <x-slot name="action">

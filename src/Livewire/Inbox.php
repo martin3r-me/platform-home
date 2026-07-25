@@ -73,18 +73,25 @@ class Inbox extends Component
         return $channelOk && $statusOk;
     }
 
-    protected function channels(): array
+    /**
+     * Kanal-Definitionen. Die Counts werden in render() aus der TATSÄCHLICHEN
+     * (gemergten) Liste abgeleitet — nie hartkodiert, damit Zahl und Liste immer
+     * zusammenpassen (Meeting ist echt verdrahtet, der Rest noch Dummy).
+     */
+    protected function channels(array $counts = []): array
     {
-        return [
-            ['key' => 'all',       'label' => 'Alle',      'icon' => 'heroicon-o-inbox',                    'count' => 8],
-            ['key' => 'mail',      'label' => 'E-Mail',    'icon' => 'heroicon-o-envelope',                 'count' => 2],
-            ['key' => 'meeting',   'label' => 'Meeting',   'icon' => 'heroicon-o-calendar-days',            'count' => 1],
-            ['key' => 'task',      'label' => 'Aufgabe',   'icon' => 'heroicon-o-clipboard-document-check', 'count' => 1],
-            ['key' => 'message',   'label' => 'Teams',     'icon' => 'heroicon-o-chat-bubble-left',         'count' => 1],
-            ['key' => 'call',      'label' => 'Anruf',     'icon' => 'heroicon-o-phone',                    'count' => 1],
-            ['key' => 'recording', 'label' => 'Aufnahme',  'icon' => 'heroicon-o-microphone',               'count' => 1],
-            ['key' => 'system',    'label' => 'System',    'icon' => 'heroicon-o-bell',                     'count' => 1],
+        $defs = [
+            ['key' => 'all',       'label' => 'Alle',      'icon' => 'heroicon-o-inbox'],
+            ['key' => 'mail',      'label' => 'E-Mail',    'icon' => 'heroicon-o-envelope'],
+            ['key' => 'meeting',   'label' => 'Meeting',   'icon' => 'heroicon-o-calendar-days'],
+            ['key' => 'task',      'label' => 'Aufgabe',   'icon' => 'heroicon-o-clipboard-document-check'],
+            ['key' => 'message',   'label' => 'Teams',     'icon' => 'heroicon-o-chat-bubble-left'],
+            ['key' => 'call',      'label' => 'Anruf',     'icon' => 'heroicon-o-phone'],
+            ['key' => 'recording', 'label' => 'Aufnahme',  'icon' => 'heroicon-o-microphone'],
+            ['key' => 'system',    'label' => 'System',    'icon' => 'heroicon-o-bell'],
         ];
+
+        return array_map(fn ($c) => $c + ['count' => $counts[$c['key']] ?? 0], $defs);
     }
 
     protected function statuses(): array
@@ -246,10 +253,13 @@ class Inbox extends Component
             'icon'          => 'heroicon-o-calendar-days',
             'sender'        => $m['subject'] ?? 'Meeting',
             'subject'       => $m['when'] ?? '',
-            'preview'       => trim((($m['participants_count'] ?? 0) . ' Teilnehmer') . (($m['is_online'] ?? false) ? ' · online' : '')),
+            'preview'       => trim(($m['participants_count'] ?? 0) . ' Teilnehmer'),
             'time'          => $m['time_short'] ?? '',
             'unread'        => (bool) ($m['unread'] ?? true),
             'status'        => 'new',
+            'section'       => $m['section'] ?? null,
+            'is_series'     => (bool) ($m['is_series'] ?? false),
+            'series_count'  => (int) ($m['series_count'] ?? 1),
         ], $rows);
     }
 
@@ -262,6 +272,13 @@ class Inbox extends Component
         if (!empty($real)) {
             $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'meeting'));
             $all = array_merge($real, $all);
+        }
+
+        // Kanal-Counts aus der tatsächlichen Liste — Zahl und Inhalt passen immer zusammen.
+        $counts = ['all' => count($all)];
+        foreach ($all as $it) {
+            $ch = $it['channel'] ?? '';
+            $counts[$ch] = ($counts[$ch] ?? 0) + 1;
         }
 
         $filtered = array_values(array_filter($all, fn ($it) => $this->matches($it)));
@@ -291,7 +308,7 @@ class Inbox extends Component
         }
 
         return view('home::livewire.inbox', [
-            'channels' => $this->channels(),
+            'channels' => $this->channels($counts),
             'statuses' => $this->statuses(),
             'items'    => $filtered,
             'selected' => $selected,
