@@ -7,29 +7,23 @@
     <x-slot name="sidebar">
         <x-ui-page-sidebar title="Kanäle" icon="heroicon-o-inbox" width="w-64" :defaultOpen="true" side="left">
             <div class="space-y-4 p-3">
-                <x-ui-sidebar-list label="Eingang">
-                    @foreach($channels['eingang'] as $c)
-                        <x-ui-sidebar-item type="button" wire:click="setFilter('{{ $c['key'] }}')" :active="$filter === $c['key']">
-                            @svg($c['icon'], 'w-4 h-4 shrink-0')
-                            <span class="text-sm">{{ $c['label'] }}</span>
-                            @if($c['count'])
-                                <x-slot name="trailing"><span class="text-xs tabular-nums text-[color:var(--nx-faint)]">{{ $c['count'] }}</span></x-slot>
-                            @endif
-                        </x-ui-sidebar-item>
-                    @endforeach
-                </x-ui-sidebar-list>
-
-                <x-ui-sidebar-list label="Kanäle">
-                    @foreach($channels['kanaele'] as $c)
-                        <x-ui-sidebar-item type="button" wire:click="setFilter('{{ $c['key'] }}')" :active="$filter === $c['key']">
-                            @svg($c['icon'], 'w-4 h-4 shrink-0')
-                            <span class="text-sm">{{ $c['label'] }}</span>
-                            @if($c['count'])
-                                <x-slot name="trailing"><span class="text-xs tabular-nums text-[color:var(--nx-faint)]">{{ $c['count'] }}</span></x-slot>
-                            @endif
-                        </x-ui-sidebar-item>
-                    @endforeach
-                </x-ui-sidebar-list>
+                @foreach(['eingang' => 'Eingang', 'kanaele' => 'Kanäle'] as $group => $groupLabel)
+                    <div>
+                        <div class="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">{{ $groupLabel }}</div>
+                        <div class="flex flex-col gap-0.5">
+                            @foreach($channels[$group] as $c)
+                                <button type="button" wire:click="setFilter('{{ $c['key'] }}')"
+                                        class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors {{ $filter === $c['key'] ? 'bg-[color:var(--nx-active)] font-semibold' : 'hover:bg-[color:var(--nx-hover)]' }}">
+                                    @svg($c['icon'], 'h-4 w-4 shrink-0 text-[color:var(--nx-muted)]')
+                                    <span class="flex-1 truncate text-sm text-[color:var(--nx-text)]">{{ $c['label'] }}</span>
+                                    @if($c['count'])
+                                        <span class="text-xs tabular-nums text-[color:var(--nx-faint)]">{{ $c['count'] }}</span>
+                                    @endif
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </x-ui-page-sidebar>
     </x-slot>
