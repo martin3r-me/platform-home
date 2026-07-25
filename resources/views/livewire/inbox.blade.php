@@ -92,7 +92,29 @@
                     {{ $selected['summary'] }}
                 </x-nx-callout>
 
-                <div class="whitespace-pre-line text-sm leading-relaxed text-[color:var(--nx-text)]">{{ $selected['body'] }}</div>
+                {{-- Kanal-spezifischer Body --}}
+                @switch($selected['channel'])
+                    @case('mail')
+                        @include('home::partials.inbox.body-mail', ['item' => $selected])
+                    @break
+                    @case('message')
+                        @include('home::partials.inbox.body-message', ['item' => $selected])
+                    @break
+                    @case('meeting')
+                        @include('home::partials.inbox.body-meeting', ['item' => $selected])
+                    @break
+                    @case('task')
+                        @include('home::partials.inbox.body-task', ['item' => $selected])
+                    @break
+                    @case('call')
+                        @include('home::partials.inbox.body-call', ['item' => $selected])
+                    @break
+                    @case('recording')
+                        @include('home::partials.inbox.body-recording', ['item' => $selected])
+                    @break
+                    @default
+                        @include('home::partials.inbox.body-system', ['item' => $selected])
+                @endswitch
             </div>
         @else
             <x-nx-empty icon="heroicon-o-inbox">
