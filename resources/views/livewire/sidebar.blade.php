@@ -9,6 +9,10 @@
             @svg('heroicon-o-squares-2x2', 'w-4 h-4 shrink-0')
             <span class="text-sm">Dashboard</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('home.inbox')" :active="request()->routeIs('home.inbox')">
+            @svg('heroicon-o-inbox', 'w-4 h-4 shrink-0')
+            <span class="text-sm">Eingang</span>
+        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('home.mein-tag')" :active="request()->routeIs('home.mein-tag')">
             @svg('heroicon-o-sun', 'w-4 h-4 shrink-0')
             <span class="text-sm">Mein Tag</span>
