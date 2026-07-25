@@ -41,7 +41,7 @@
                         <x-nx-card>
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    @if($c['url'])
+                                    @if(!empty($c['url']))
                                         <a href="{{ $c['url'] }}" wire:navigate class="text-sm font-semibold text-[color:var(--nx-text)] hover:underline">{{ $c['title'] }}</a>
                                     @else
                                         <span class="text-sm font-semibold text-[color:var(--nx-text)]">{{ $c['title'] }}</span>
