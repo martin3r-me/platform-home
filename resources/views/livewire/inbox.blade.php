@@ -119,10 +119,13 @@
                         <div class="mt-2 flex flex-wrap gap-2">
                             @foreach($selected['context'] as $ctx)
                                 <span class="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--nx-accent-soft)] px-2 py-1 text-xs text-[color:var(--nx-text)]">
-                                    @svg($ctx['icon'], 'h-3.5 w-3.5 text-[color:var(--nx-muted)]')
-                                    {{ $ctx['label'] }}
+                                    @svg($ctx['icon'], 'h-3.5 w-3.5 shrink-0 text-[color:var(--nx-muted)]')
+                                    @if(!empty($ctx['path']))
+                                        <span class="text-[color:var(--nx-faint)]">{{ $ctx['path'] }} › </span>
+                                    @endif
+                                    <span class="font-medium">{{ $ctx['label'] }}</span>
                                     @if(($selected['real'] ?? false) && !empty($ctx['id']))
-                                        <button type="button" wire:click="detachNode({{ $ctx['id'] }})" class="ml-0.5 text-[color:var(--nx-faint)] hover:text-[color:var(--nx-danger)]" title="Lösen">
+                                        <button type="button" wire:click="detachNode({{ $ctx['id'] }})" class="ml-0.5 shrink-0 text-[color:var(--nx-faint)] hover:text-[color:var(--nx-danger)]" title="Lösen">
                                             @svg('heroicon-o-x-mark', 'h-3 w-3')
                                         </button>
                                     @endif
