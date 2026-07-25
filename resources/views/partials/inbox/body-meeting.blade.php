@@ -13,7 +13,8 @@
                     Org-Knoten hängt, werden die Zeiten automatisch getrackt.
                 @endif
                 <x-slot name="action">
-                    <x-nx-button variant="primary" size="sm" icon="heroicon-o-sparkles" wire:click="promoteMeeting" wire:loading.attr="disabled">
+                    <x-nx-button variant="primary" size="sm" wire:click="promoteMeeting" wire:loading.attr="disabled">
+                        @svg('heroicon-o-sparkles', 'h-4 w-4')
                         {{ $isSeries ? 'Serie einklinken' : 'Zu Meeting machen' }}
                     </x-nx-button>
                 </x-slot>
@@ -23,7 +24,8 @@
                 Agenda &amp; Notizen sind im meetings-Workspace pflegbar. An einem Org-Knoten werden die Zeiten getrackt.
                 @if(\Illuminate\Support\Facades\Route::has('meetings.show'))
                     <x-slot name="action">
-                        <x-nx-button variant="secondary" size="sm" icon="heroicon-o-arrow-top-right-on-square" :href="route('meetings.show', $item['meeting_id'])">
+                        <x-nx-button variant="secondary" size="sm" :href="route('meetings.show', $item['meeting_id'])">
+                            @svg('heroicon-o-arrow-top-right-on-square', 'h-4 w-4')
                             In Meetings öffnen
                         </x-nx-button>
                     </x-slot>

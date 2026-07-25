@@ -101,9 +101,11 @@
                     <x-nx-button variant="secondary" size="sm">→ Ticket</x-nx-button>
                 </div>
 
-                <x-nx-callout variant="info" title="KI-Zusammenfassung">
-                    {{ $selected['summary'] }}
-                </x-nx-callout>
+                @if(!empty($selected['summary']))
+                    <x-nx-callout variant="info" title="KI-Zusammenfassung">
+                        {{ $selected['summary'] }}
+                    </x-nx-callout>
+                @endif
 
                 {{-- Org-Kontext: wo hängt's, was noch dran — der eigentliche Kern --}}
                 <x-nx-card>
