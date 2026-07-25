@@ -19,6 +19,9 @@ class Inbox extends Component
     public string $channel = 'all';
     public string $status = 'all';
 
+    public bool $showNodePicker = false;
+    public string $nodeQuery = '';
+
     public function selectItem(int $id): void
     {
         $this->selectedId = $id;
@@ -57,6 +60,83 @@ class Inbox extends Component
             // bleibt beim Kalender-Item, kein Fehler nach außen
         }
         // Re-render: detailForItem liefert nun meeting_id → UI kippt auf "Echtes Meeting".
+    }
+
+    public function toggleNodePicker(): void
+    {
+        $this->showNodePicker = !$this->showNodePicker;
+        $this->nodeQuery = '';
+    }
+
+    /**
+     * Item an einen Org-Knoten hängen — der Kern der Inbox: Dinge in die
+     * Organisation hängen. Ist das Item schon promotet, hängt auch das Meeting an
+     * denselben Knoten (Wissen fließt in den Puls; Zeit läuft separat übers Item).
+     */
+    public function attachNode(int $entityId): void
+    {
+        $item = $this->currentInboxItem();
+        if (!$item) {
+            return;
+        }
+
+        $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
+        try {
+            app($svc)->link($item, $entityId);
+
+            $bridge = \Platform\Organization\Services\EntityDimensionBridge::class;
+            if ($item->meeting_id && class_exists($bridge)) {
+                $bridge::createLink($entityId, 'meeting', (int) $item->meeting_id);
+            }
+        } catch (\Throwable $e) {
+            // Organization nicht verfügbar → still, Kontext bleibt leer.
+        }
+
+        $this->showNodePicker = false;
+        $this->nodeQuery = '';
+    }
+
+    public function detachNode(int $entityId): void
+    {
+        $item = $this->currentInboxItem();
+        if (!$item) {
+            return;
+        }
+        try {
+            app(\Platform\Inbox\Services\InboxEntityLinkService::class)->unlink($item, $entityId);
+        } catch (\Throwable $e) {
+            // still
+        }
+    }
+
+    /** Der aktuell gewählte ECHTE Inbox-Datensatz (nur reale Items, ID ab 10000). */
+    protected function currentInboxItem(): ?\Platform\Inbox\Models\InboxItem
+    {
+        if (!$this->selectedId || $this->selectedId < 10000) {
+            return null;
+        }
+        if (!class_exists(\Platform\Inbox\Models\InboxItem::class)) {
+            return null;
+        }
+        return \Platform\Inbox\Models\InboxItem::find($this->selectedId - 10000);
+    }
+
+    /** Knoten-Suchtreffer für den Picker (soft-coupled über den Inbox-Service). */
+    protected function nodeResults(): array
+    {
+        $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
+        if (!class_exists($svc) || trim($this->nodeQuery) === '') {
+            return [];
+        }
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+        try {
+            return app($svc)->search($this->nodeQuery, $user->currentTeam->id, 8);
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     protected function matches(array $item): bool
@@ -308,10 +388,11 @@ class Inbox extends Component
         }
 
         return view('home::livewire.inbox', [
-            'channels' => $this->channels($counts),
-            'statuses' => $this->statuses(),
-            'items'    => $filtered,
-            'selected' => $selected,
+            'channels'    => $this->channels($counts),
+            'statuses'    => $this->statuses(),
+            'items'       => $filtered,
+            'selected'    => $selected,
+            'nodeResults' => $this->showNodePicker ? $this->nodeResults() : [],
         ])->layout('platform::layouts.app');
     }
 }

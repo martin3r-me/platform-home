@@ -114,14 +114,50 @@
                             @svg('heroicon-o-share', 'w-4 h-4')
                             Kontext
                         </div>
-                        <x-nx-button variant="ghost" size="sm">An Knoten hängen</x-nx-button>
+                        @if($selected['real'] ?? false)
+                            <x-nx-button variant="ghost" size="sm" wire:click="toggleNodePicker">
+                                @svg('heroicon-o-plus', 'h-4 w-4')
+                                An Knoten hängen
+                            </x-nx-button>
+                        @endif
                     </div>
+
+                    {{-- Knoten-Suche: der Kern — Dinge in die Organisation hängen --}}
+                    @if($showNodePicker && ($selected['real'] ?? false))
+                        <div class="mt-3" wire:key="node-picker">
+                            <input type="text" wire:model.live.debounce.300ms="nodeQuery"
+                                   placeholder="Knoten suchen (Name oder Code) …"
+                                   class="w-full rounded-md border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2.5 py-1.5 text-sm text-[color:var(--nx-text)] placeholder:text-[color:var(--nx-faint)] focus:outline-none focus:ring-1 focus:ring-[color:var(--nx-line-strong)]" />
+                            @if(!empty($nodeResults))
+                                <div class="mt-1 overflow-hidden rounded-md border border-[color:var(--nx-line)]">
+                                    @foreach($nodeResults as $r)
+                                        <button type="button" wire:click="attachNode({{ $r['id'] }})"
+                                                class="flex w-full items-center gap-2 border-b border-[color:var(--nx-line)] px-2.5 py-2 text-left last:border-0 hover:bg-[color:var(--nx-hover)]">
+                                            @svg('heroicon-o-cube', 'h-4 w-4 shrink-0 text-[color:var(--nx-muted)]')
+                                            <span class="flex-1 truncate text-sm text-[color:var(--nx-text)]">{{ $r['name'] }}</span>
+                                            @if(!empty($r['type']))
+                                                <span class="shrink-0 text-xs text-[color:var(--nx-faint)]">{{ $r['type'] }}</span>
+                                            @endif
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @elseif(trim($nodeQuery) !== '')
+                                <div class="mt-1 px-2 py-2 text-xs text-[color:var(--nx-faint)]">Kein Knoten gefunden.</div>
+                            @endif
+                        </div>
+                    @endif
+
                     @if(!empty($selected['context']))
                         <div class="mt-2 flex flex-wrap gap-2">
                             @foreach($selected['context'] as $ctx)
                                 <span class="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--nx-accent-soft)] px-2 py-1 text-xs text-[color:var(--nx-text)]">
                                     @svg($ctx['icon'], 'h-3.5 w-3.5 text-[color:var(--nx-muted)]')
                                     {{ $ctx['label'] }}
+                                    @if(($selected['real'] ?? false) && !empty($ctx['id']))
+                                        <button type="button" wire:click="detachNode({{ $ctx['id'] }})" class="ml-0.5 text-[color:var(--nx-faint)] hover:text-[color:var(--nx-danger)]" title="Lösen">
+                                            @svg('heroicon-o-x-mark', 'h-3 w-3')
+                                        </button>
+                                    @endif
                                 </span>
                             @endforeach
                         </div>
