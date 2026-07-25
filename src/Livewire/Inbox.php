@@ -19,7 +19,6 @@ class Inbox extends Component
     public string $channel = 'all';
     public string $status = 'all';
 
-    public bool $showNodePicker = false;
     public string $nodeQuery = '';
 
     public function selectItem(int $id): void
@@ -62,12 +61,6 @@ class Inbox extends Component
         // Re-render: detailForItem liefert nun meeting_id → UI kippt auf "Echtes Meeting".
     }
 
-    public function toggleNodePicker(): void
-    {
-        $this->showNodePicker = !$this->showNodePicker;
-        $this->nodeQuery = '';
-    }
-
     /**
      * Item an einen Org-Knoten hängen — der Kern der Inbox: Dinge in die
      * Organisation hängen. Ist das Item schon promotet, hängt auch das Meeting an
@@ -92,7 +85,6 @@ class Inbox extends Component
             // Organization nicht verfügbar → still, Kontext bleibt leer.
         }
 
-        $this->showNodePicker = false;
         $this->nodeQuery = '';
     }
 
@@ -392,7 +384,7 @@ class Inbox extends Component
             'statuses'    => $this->statuses(),
             'items'       => $filtered,
             'selected'    => $selected,
-            'nodeResults' => $this->showNodePicker ? $this->nodeResults() : [],
+            'nodeResults' => $this->nodeResults(),
         ])->layout('platform::layouts.app');
     }
 }
