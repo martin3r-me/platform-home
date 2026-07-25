@@ -113,10 +113,12 @@ class Inbox extends Component
                 $bridge::createLink($entityId, 'meeting', (int) $item->meeting_id);
             }
 
-            // Auto-Propagation: derselbe Termin (iCalUId) hängt für ALLE gesyncten
-            // Beteiligten am selben Knoten → jede/r bucht dort automatisch die Zeit.
+            // Auto-Propagation über die Einheit: Meeting (iCalUId) → alle Beteiligten;
+            // Mail-Thread (conversation_id) → alle Mails des Threads. Nie Einzel-Item.
             if (!empty($item->ical_uid)) {
                 app($svc)->linkSiblingsByIcalUid($item, $entityId);
+            } elseif (!empty($item->conversation_id)) {
+                app($svc)->linkSiblingsByConversation($item, $entityId);
             }
         } catch (\Throwable $e) {
             // Organization nicht verfügbar → still, Kontext bleibt leer.
@@ -141,10 +143,11 @@ class Inbox extends Component
                 $bridge::deleteLink($entityId, 'meeting', (int) $item->meeting_id);
             }
 
-            // Auto-Propagation zurücknehmen: der Termin wandert für ALLE Beteiligten
-            // vom Knoten weg.
+            // Auto-Propagation zurücknehmen — für die ganze Einheit (Serie/Thread).
             if (!empty($item->ical_uid)) {
                 app($svc)->unlinkSiblingsByIcalUid($item, $entityId);
+            } elseif (!empty($item->conversation_id)) {
+                app($svc)->unlinkSiblingsByConversation($item, $entityId);
             }
         } catch (\Throwable $e) {
             // still
@@ -420,6 +423,8 @@ class Inbox extends Component
             'time'          => $m['time'] ?? '',
             'unread'        => (bool) ($m['unread'] ?? true),
             'status'        => 'new',
+            'is_thread'     => ($m['thread_count'] ?? 1) > 1,
+            'thread_count'  => (int) ($m['thread_count'] ?? 1),
         ], $rows);
     }
 

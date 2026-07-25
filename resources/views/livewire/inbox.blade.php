@@ -65,6 +65,11 @@
                                                 @svg('heroicon-o-arrow-path', 'h-3 w-3')
                                                 Serie{{ ($it['series_count'] ?? 1) > 1 ? ' · ' . $it['series_count'] : '' }}
                                             </span>
+                                        @elseif(!empty($it['is_thread']))
+                                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color:var(--nx-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--nx-muted)]">
+                                                @svg('heroicon-o-chat-bubble-left-right', 'h-3 w-3')
+                                                Thread · {{ $it['thread_count'] }}
+                                            </span>
                                         @endif
                                         <span class="truncate text-xs text-[color:var(--nx-faint)]">{{ $it['preview'] }}</span>
                                     </div>
