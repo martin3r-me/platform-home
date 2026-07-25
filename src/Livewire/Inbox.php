@@ -125,7 +125,7 @@ class Inbox extends Component
             return [];
         }
         try {
-            return app($svc)->search($this->nodeQuery, $user->currentTeam->id, 8);
+            return app($svc)->search($this->nodeQuery, $user->currentTeam->id, 12);
         } catch (\Throwable $e) {
             return [];
         }

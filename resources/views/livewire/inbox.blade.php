@@ -143,7 +143,12 @@
                                         <button type="button" wire:click="attachNode({{ $r['id'] }})"
                                                 class="flex w-full items-center gap-2 border-b border-[color:var(--nx-line)] px-2.5 py-2 text-left last:border-0 hover:bg-[color:var(--nx-hover)]">
                                             @svg('heroicon-o-cube', 'h-4 w-4 shrink-0 text-[color:var(--nx-muted)]')
-                                            <span class="flex-1 truncate text-sm text-[color:var(--nx-text)]">{{ $r['name'] }}</span>
+                                            <span class="flex min-w-0 flex-1 items-baseline gap-1.5">
+                                                <span class="truncate text-sm text-[color:var(--nx-text)]">{{ $r['name'] }}</span>
+                                                @if(!empty($r['parent']))
+                                                    <span class="truncate text-xs text-[color:var(--nx-faint)]">· {{ $r['parent'] }}</span>
+                                                @endif
+                                            </span>
                                             @if(!empty($r['type']))
                                                 <span class="shrink-0 text-xs text-[color:var(--nx-faint)]">{{ $r['type'] }}</span>
                                             @endif
