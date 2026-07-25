@@ -3,6 +3,8 @@
 namespace Platform\Home\Livewire;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
+use Platform\Core\Models\Checkin;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -20,6 +22,11 @@ class Dashboard extends Component
 
     /** Avatar-URL des Users (für die Kontext-Sidebar). */
     public ?string $avatar = null;
+
+    // --- Täglicher Check-in (Core) ---
+    public int $streak = 0;
+    /** Heutiger Check-in als Array (oder null). */
+    public ?array $todayCheckin = null;
 
     /** Ist ein Person-Knoten mit dem User verknüpft? */
     public bool $hasPerson = false;
@@ -58,6 +65,8 @@ class Dashboard extends Component
         $this->greeting = $this->greetingForHour((int) now()->format('G'));
         $this->avatar = $user->avatar ?? null;
 
+        $this->loadDay();
+
         $teamId = $user->currentTeam?->id;
         if (!$teamId) {
             return;
@@ -95,6 +104,25 @@ class Dashboard extends Component
         $this->sectionConfigs = $registry->allSectionConfigs();
         $this->vitalSigns = $registry->allVitalSigns($user->id, $teamId);
         $this->responsibilities = $registry->allResponsibilities($user->id, $teamId, 5);
+    }
+
+    /**
+     * Heutiger Check-in + Streak (Core). Refresh nach dem Speichern im Modal.
+     */
+    #[On('checkin-saved')]
+    public function loadDay(): void
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return;
+        }
+
+        $this->streak = Checkin::currentStreak($userId);
+
+        $checkin = Checkin::where('user_id', $userId)
+            ->where('date', now()->toDateString())
+            ->first();
+        $this->todayCheckin = $checkin?->toArray();
     }
 
     /**

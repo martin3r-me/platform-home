@@ -23,19 +23,74 @@
 
     <x-ui-page-container width="contained">
         {{-- Kopf --}}
-        <div class="mb-10">
-            <h1 class="text-2xl font-semibold tracking-tight text-[color:var(--nx-text)]">
-                {{ $greeting }}{{ $firstName ? ', ' . $firstName : '' }}
-            </h1>
-            <p class="mt-1 text-sm text-[color:var(--nx-muted)]">Dein Überblick</p>
+        <div class="mb-10 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight text-[color:var(--nx-text)]">
+                    {{ $greeting }}{{ $firstName ? ', ' . $firstName : '' }}
+                </h1>
+                <p class="mt-1 text-sm text-[color:var(--nx-muted)]">Dein Überblick</p>
+            </div>
+            @if($streak > 0)
+                <x-nx-badge variant="accent">🔥 {{ $streak }} {{ $streak === 1 ? 'Tag' : 'Tage' }} Streak</x-nx-badge>
+            @endif
         </div>
 
-        @if(!$orgAvailable)
-            <x-nx-callout variant="neutral" title="Kein Organisations-Kontext">
-                Das organization-Modul ist hier nicht verfügbar — es liefert den Person-Knoten, aus dem dieses Dashboard speist.
-            </x-nx-callout>
-        @else
-            <div class="space-y-10">
+        <div class="space-y-10">
+            {{-- Täglicher Check-in (Core, unabhängig vom org-Kontext) --}}
+            @if(!$todayCheckin)
+                <x-nx-callout variant="warning" title="Noch kein Check-in heute" icon="heroicon-o-sun">
+                    Starte deinen Tag mit einem kurzen Check-in — Ziel setzen, Stimmung festhalten.
+                    <x-slot name="action">
+                        <x-nx-button variant="primary" x-data @click="$dispatch('open-modal-checkin')">
+                            Jetzt einchecken
+                        </x-nx-button>
+                    </x-slot>
+                </x-nx-callout>
+            @else
+                @php
+                    $moodLabels = \Platform\Core\Models\Checkin::getMoodScoreOptions();
+                    $energyLabels = \Platform\Core\Models\Checkin::getEnergyScoreOptions();
+                    $goal = trim((string) ($todayCheckin['daily_goal'] ?? ''));
+                    $moodScore = $todayCheckin['mood_score'] ?? null;
+                    $energyScore = $todayCheckin['energy_score'] ?? null;
+                @endphp
+                <x-nx-card>
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
+                            @svg('heroicon-o-check-circle', 'w-4 h-4 text-[color:var(--nx-success)]')
+                            Heute eingecheckt
+                        </div>
+                        <x-nx-button variant="ghost" size="sm" x-data @click="$dispatch('open-modal-checkin')">
+                            bearbeiten
+                        </x-nx-button>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="text-xs text-[color:var(--nx-faint)]">Tagesziel</div>
+                        <div class="mt-0.5 text-[color:var(--nx-text)]">
+                            {{ $goal !== '' ? $goal : '— kein Ziel gesetzt —' }}
+                        </div>
+                    </div>
+
+                    @if($moodScore !== null || $energyScore !== null)
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            @if($moodScore !== null)
+                                <x-nx-badge variant="neutral" dot>Stimmung: {{ $moodLabels[$moodScore] ?? $moodScore }}</x-nx-badge>
+                            @endif
+                            @if($energyScore !== null)
+                                <x-nx-badge variant="neutral" dot>Energie: {{ $energyLabels[$energyScore] ?? $energyScore }}</x-nx-badge>
+                            @endif
+                        </div>
+                    @endif
+                </x-nx-card>
+            @endif
+
+            {{-- Org-gespeiste Inhalte --}}
+            @if(!$orgAvailable)
+                <x-nx-callout variant="neutral" title="Kein Organisations-Kontext">
+                    Das organization-Modul ist hier nicht verfügbar — es liefert den Person-Knoten, aus dem Kennzahlen und Zuständigkeiten speisen.
+                </x-nx-callout>
+            @else
                 {{-- Getrackte Zeiten (letzte 7 Tage) --}}
                 @if($hasTime)
                     <x-nx-section icon="heroicon-o-clock" title="Zeiten" :hint="$timeTotal" description="Letzte 7 Tage · gestempelt">
@@ -143,7 +198,7 @@
                         </x-nx-section>
                     @endforeach
                 @endif
-            </div>
-        @endif
+            @endif
+        </div>
     </x-ui-page-container>
 </x-ui-page>
