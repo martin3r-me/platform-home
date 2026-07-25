@@ -21,6 +21,11 @@ class Inbox extends Component
 
     public string $nodeQuery = '';
 
+    public function mount(): void
+    {
+        $this->selectFirst();
+    }
+
     public function selectItem(int $id): void
     {
         $this->selectedId = $id;
@@ -29,11 +34,13 @@ class Inbox extends Component
     public function setChannel(string $channel): void
     {
         $this->channel = $channel;
+        $this->selectFirst();
     }
 
     public function setStatus(string $status): void
     {
         $this->status = $status;
+        $this->selectFirst();
     }
 
     /**
@@ -378,7 +385,8 @@ class Inbox extends Component
         ], $rows);
     }
 
-    public function render()
+    /** Die gemergte Gesamtliste (Dummies + echte Meetings), ungefiltert. */
+    protected function mergedItems(): array
     {
         $all = $this->items();
 
@@ -388,6 +396,20 @@ class Inbox extends Component
             $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'meeting'));
             $all = array_merge($real, $all);
         }
+
+        return $all;
+    }
+
+    /** Vorselektion: das erste Item der aktuellen Kanal/Status-Ansicht wählen. */
+    protected function selectFirst(): void
+    {
+        $filtered = array_values(array_filter($this->mergedItems(), fn ($it) => $this->matches($it)));
+        $this->selectedId = $filtered[0]['id'] ?? null;
+    }
+
+    public function render()
+    {
+        $all = $this->mergedItems();
 
         // Kanal-Counts aus der tatsächlichen Liste — Zahl und Inhalt passen immer zusammen.
         $counts = ['all' => count($all)];
