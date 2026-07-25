@@ -465,6 +465,43 @@ class Inbox extends Component
         ], $rows);
     }
 
+    /**
+     * Echte Aufgaben-Items (mir zugewiesen) über den Inbox-Kontrakt.
+     */
+    protected function realTasks(): array
+    {
+        $contract = \Platform\Inbox\Contracts\InboxTaskQueryContract::class;
+        if (!interface_exists($contract)) {
+            return [];
+        }
+
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+
+        try {
+            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_map(fn ($m) => [
+            'id'            => 40000 + (int) $m['id'],   // eigener ID-Raum (Aufgaben)
+            'inbox_id'      => (int) $m['id'],
+            'real'          => true,
+            'channel'       => 'task',
+            'channel_label' => 'Aufgabe',
+            'icon'          => 'heroicon-o-clipboard-document-check',
+            'sender'        => $m['sender'] ?? 'Zugewiesen',
+            'subject'       => $m['subject'] ?? '',
+            'preview'       => $m['preview'] ?? '',
+            'time'          => $m['time'] ?? '',
+            'unread'        => (bool) ($m['unread'] ?? true),
+            'status'        => 'new',
+        ], $rows);
+    }
+
     /** Die gemergte Gesamtliste (echte Items + Dummies), ungefiltert. */
     protected function mergedItems(): array
     {
@@ -472,22 +509,16 @@ class Inbox extends Component
         $prepend = [];
 
         // Je Kanal: Dummies durch echte Items ersetzen (falls vorhanden).
-        $realMeetings = $this->realMeetings();
-        if (!empty($realMeetings)) {
-            $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'meeting'));
-            $prepend = array_merge($prepend, $realMeetings);
-        }
-
-        $realMails = $this->realMails();
-        if (!empty($realMails)) {
-            $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'mail'));
-            $prepend = array_merge($prepend, $realMails);
-        }
-
-        $realCalls = $this->realCalls();
-        if (!empty($realCalls)) {
-            $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'call'));
-            $prepend = array_merge($prepend, $realCalls);
+        foreach ([
+            'meeting' => $this->realMeetings(),
+            'mail'    => $this->realMails(),
+            'call'    => $this->realCalls(),
+            'task'    => $this->realTasks(),
+        ] as $channel => $real) {
+            if (!empty($real)) {
+                $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== $channel));
+                $prepend = array_merge($prepend, $real);
+            }
         }
 
         return array_merge($prepend, $all);
@@ -527,6 +558,7 @@ class Inbox extends Component
                 'meeting' => \Platform\Inbox\Contracts\InboxMeetingQueryContract::class,
                 'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
                 'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
+                'task'    => \Platform\Inbox\Contracts\InboxTaskQueryContract::class,
                 default   => null,
             };
             if ($contract && interface_exists($contract)) {
