@@ -78,30 +78,55 @@
                     Sobald dein Benutzer im organization-Modul mit einer Person-Entität verknüpft ist, laufen hier deine Kennzahlen zusammen.
                 </x-nx-callout>
             @else
-                @php $hasKpis = $hasTime || !empty($vitalSigns); @endphp
-                @if($hasKpis)
-                    <x-nx-section icon="heroicon-o-squares-2x2" title="Auf einen Blick">
-                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                            @if($hasTime)
-                                <x-nx-stat label="Zeiten · 7 Tage" :value="$timeTotal" icon="heroicon-o-clock" :href="route('home.zeiten')" />
-                            @endif
-                            @foreach($vitalSigns as $sectionKey => $metrics)
-                                @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
-                                @foreach($metrics as $m)
-                                    <x-nx-stat
-                                        :label="$m['label'] ?? ''"
-                                        :value="$m['value'] ?? 0"
-                                        :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
-                                        :accent="$this->accentFor($m['variant'] ?? 'default')"
-                                        :href="$this->kpiHref($sectionKey)" />
-                                @endforeach
-                            @endforeach
-                        </div>
-                    </x-nx-section>
-                @else
+                @php $hasContent = $hasTime || !empty($vitalSigns); @endphp
+                @if(!$hasContent)
                     <x-nx-empty icon="heroicon-o-sparkles">
                         Alles ruhig — aktuell laufen keine Kennzahlen auf deinen Knoten auf.
                     </x-nx-empty>
+                @else
+                    {{-- Auf einen Blick — Kennzahlen, die dich brauchen --}}
+                    @if(!empty($vitalSigns))
+                        <x-nx-section icon="heroicon-o-squares-2x2" title="Auf einen Blick">
+                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                                @foreach($vitalSigns as $sectionKey => $metrics)
+                                    @php $cfg = $sectionConfigs[$sectionKey] ?? []; @endphp
+                                    @foreach($metrics as $m)
+                                        <x-nx-stat
+                                            :label="$m['label'] ?? ''"
+                                            :value="$m['value'] ?? 0"
+                                            :icon="'heroicon-o-' . ($cfg['icon'] ?? 'chart-bar')"
+                                            :accent="$this->accentFor($m['variant'] ?? 'default')"
+                                            :href="$this->kpiHref($sectionKey)" />
+                                    @endforeach
+                                @endforeach
+                            </div>
+                        </x-nx-section>
+                    @endif
+
+                    {{-- Zeiten · 7 Tage — Balken (Orientierungshilfe) --}}
+                    @if($hasTime)
+                        <x-nx-card>
+                            <div class="mb-3 flex items-baseline justify-between gap-3">
+                                <div class="flex flex-wrap items-baseline gap-2">
+                                    <span class="text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">Zeiten · 7 Tage</span>
+                                    <span class="text-lg font-semibold tabular-nums text-[color:var(--nx-text)]">{{ $timeTotal }}</span>
+                                    <span class="text-xs text-[color:var(--nx-faint)]">· abgerechnet {{ $timeBilled }}</span>
+                                </div>
+                                <x-nx-button variant="ghost" size="sm" :href="route('home.zeiten')" wire:navigate>Details</x-nx-button>
+                            </div>
+                            <div class="flex items-end gap-2" style="height: 64px;">
+                                @foreach($timeByDay as $day)
+                                    @php
+                                        $barPx = $timeMaxMinutes > 0 ? max(3, (int) round($day['minutes'] / $timeMaxMinutes * 52)) : 3;
+                                    @endphp
+                                    <div class="flex flex-1 flex-col items-center justify-end gap-1">
+                                        <div class="w-full rounded-[3px] {{ $day['minutes'] > 0 ? 'bg-[color:var(--nx-accent)]' : 'bg-[color:var(--nx-accent-soft)]' }}" style="height: {{ $barPx }}px;"></div>
+                                        <span class="text-[10px] uppercase text-[color:var(--nx-faint)]">{{ $day['label'] }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </x-nx-card>
+                    @endif
                 @endif
             @endif
 
