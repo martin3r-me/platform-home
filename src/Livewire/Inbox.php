@@ -428,6 +428,43 @@ class Inbox extends Component
         ], $rows);
     }
 
+    /**
+     * Echte Anruf-Items über den Inbox-Kontrakt (quellfrei, neueste zuerst).
+     */
+    protected function realCalls(): array
+    {
+        $contract = \Platform\Inbox\Contracts\InboxCallQueryContract::class;
+        if (!interface_exists($contract)) {
+            return [];
+        }
+
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+
+        try {
+            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_map(fn ($m) => [
+            'id'            => 30000 + (int) $m['id'],   // eigener ID-Raum (Anrufe)
+            'inbox_id'      => (int) $m['id'],
+            'real'          => true,
+            'channel'       => 'call',
+            'channel_label' => 'Anruf',
+            'icon'          => 'heroicon-o-phone',
+            'sender'        => $m['sender'] ?? 'Unbekannt',
+            'subject'       => $m['subject'] ?? '',
+            'preview'       => $m['preview'] ?? '',
+            'time'          => $m['time'] ?? '',
+            'unread'        => (bool) ($m['unread'] ?? true),
+            'status'        => 'new',
+        ], $rows);
+    }
+
     /** Die gemergte Gesamtliste (echte Items + Dummies), ungefiltert. */
     protected function mergedItems(): array
     {
@@ -445,6 +482,12 @@ class Inbox extends Component
         if (!empty($realMails)) {
             $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'mail'));
             $prepend = array_merge($prepend, $realMails);
+        }
+
+        $realCalls = $this->realCalls();
+        if (!empty($realCalls)) {
+            $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'call'));
+            $prepend = array_merge($prepend, $realCalls);
         }
 
         return array_merge($prepend, $all);
@@ -483,6 +526,7 @@ class Inbox extends Component
             $contract = match ($selected['channel'] ?? '') {
                 'meeting' => \Platform\Inbox\Contracts\InboxMeetingQueryContract::class,
                 'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
+                'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
                 default   => null,
             };
             if ($contract && interface_exists($contract)) {
