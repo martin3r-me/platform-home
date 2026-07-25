@@ -3,6 +3,7 @@
 namespace Platform\Home\Livewire;
 
 use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Eingang – die persönliche Inbox als Herzstück von HOME (3-Pane, nx-Stil).
@@ -189,11 +190,57 @@ class Inbox extends Component
         ];
     }
 
+    /**
+     * Echte Meeting-Items über den Inbox-Kontrakt (Kanal für Kanal echt).
+     * Fehlt Inbox/Team/Daten → leer, dann bleibt der Dummy-Meeting.
+     */
+    protected function realMeetings(): array
+    {
+        $contract = \Platform\Inbox\Contracts\InboxMeetingQueryContract::class;
+        if (!interface_exists($contract)) {
+            return [];
+        }
+
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+
+        try {
+            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 20);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_map(fn ($m) => [
+            'id'            => 10000 + (int) $m['id'],   // eigener ID-Raum, kollidiert nicht mit Dummies
+            'inbox_id'      => (int) $m['id'],
+            'real'          => true,
+            'channel'       => 'meeting',
+            'channel_label' => 'Meeting',
+            'icon'          => 'heroicon-o-calendar-days',
+            'sender'        => $m['subject'] ?? 'Meeting',
+            'subject'       => $m['when'] ?? '',
+            'preview'       => trim((($m['participants_count'] ?? 0) . ' Teilnehmer') . (($m['is_online'] ?? false) ? ' · online' : '')),
+            'time'          => $m['time_short'] ?? '',
+            'unread'        => (bool) ($m['unread'] ?? true),
+            'status'        => 'new',
+        ], $rows);
+    }
+
     public function render()
     {
         $all = $this->items();
 
+        // Meeting-Kanal echt: Dummy-Meetings durch echte ersetzen (falls vorhanden).
+        $real = $this->realMeetings();
+        if (!empty($real)) {
+            $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== 'meeting'));
+            $all = array_merge($real, $all);
+        }
+
         $filtered = array_values(array_filter($all, fn ($it) => $this->matches($it)));
+
         $selected = null;
         foreach ($all as $it) {
             if ($it['id'] === $this->selectedId) {
@@ -202,7 +249,17 @@ class Inbox extends Component
             }
         }
 
-        if ($selected) {
+        if ($selected && ($selected['real'] ?? false) && ($selected['channel'] ?? '') === 'meeting') {
+            try {
+                $detail = app(\Platform\Inbox\Contracts\InboxMeetingQueryContract::class)
+                    ->detailForItem((int) $selected['inbox_id']);
+                if ($detail) {
+                    $selected = array_merge($selected, $detail);
+                }
+            } catch (\Throwable $e) {
+                // Detail nicht verfügbar → Basisdaten aus der Liste bleiben.
+            }
+        } elseif ($selected) {
             $ctx = $this->contexts()[$selected['id']] ?? [];
             $selected['context'] = $ctx['chips'] ?? [];
             $selected['related'] = $ctx['related'] ?? null;
