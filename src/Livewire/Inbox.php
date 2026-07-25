@@ -96,6 +96,12 @@ class Inbox extends Component
         }
         try {
             app(\Platform\Inbox\Services\InboxEntityLinkService::class)->unlink($item, $entityId);
+
+            // Symmetrisch zu attachNode: auch das Meeting vom Knoten lösen.
+            $bridge = \Platform\Organization\Services\EntityDimensionBridge::class;
+            if ($item->meeting_id && class_exists($bridge)) {
+                $bridge::deleteLink($entityId, 'meeting', (int) $item->meeting_id);
+            }
         } catch (\Throwable $e) {
             // still
         }
