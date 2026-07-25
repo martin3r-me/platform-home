@@ -1,5 +1,31 @@
 {{-- Meeting: Termin, Teilnehmer, Agenda --}}
 <div class="space-y-4">
+    {{-- Roter Faden: Kalender-Termin → vollwertiges Meeting → Zeiten-Tracking --}}
+    @if($item['real'] ?? false)
+        @if(empty($item['meeting_id']))
+            <x-nx-callout variant="info" icon="heroicon-o-calendar-days" title="Noch kein echtes Meeting">
+                Mach daraus ein vollwertiges Meeting — mit pflegbarer Agenda. Sobald es an einem
+                Org-Knoten hängt, werden die Zeiten automatisch getrackt.
+                <x-slot name="action">
+                    <x-nx-button variant="primary" size="sm" icon="heroicon-o-sparkles" wire:click="promoteMeeting" wire:loading.attr="disabled">
+                        Zu Meeting machen
+                    </x-nx-button>
+                </x-slot>
+            </x-nx-callout>
+        @else
+            <x-nx-callout variant="success" icon="heroicon-o-check-circle" title="Echtes Meeting">
+                Agenda &amp; Notizen sind im meetings-Workspace pflegbar. An einem Org-Knoten werden die Zeiten getrackt.
+                @if(\Illuminate\Support\Facades\Route::has('meetings.show'))
+                    <x-slot name="action">
+                        <x-nx-button variant="secondary" size="sm" icon="heroicon-o-arrow-top-right-on-square" :href="route('meetings.show', $item['meeting_id'])">
+                            In Meetings öffnen
+                        </x-nx-button>
+                    </x-slot>
+                @endif
+            </x-nx-callout>
+        @endif
+    @endif
+
     <x-nx-property-row icon="heroicon-o-clock" label="Wann">{{ $item['when'] ?? '—' }}</x-nx-property-row>
 
     <div>
