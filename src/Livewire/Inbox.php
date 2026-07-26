@@ -21,6 +21,9 @@ class Inbox extends Component
 
     public string $nodeQuery = '';
 
+    /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
+    public string $notice = '';
+
     public function mount(): void
     {
         $this->selectFirst();
@@ -29,6 +32,7 @@ class Inbox extends Component
     public function selectItem(int $id): void
     {
         $this->selectedId = $id;
+        $this->notice = '';
     }
 
     public function setChannel(string $channel): void
@@ -81,8 +85,10 @@ class Inbox extends Component
             return;
         }
         try {
-            $item->status = \Platform\Inbox\Enums\InboxItemStatus::Done;
-            $item->save();
+            $this->setGroupStatus($item, [
+                'status'      => \Platform\Inbox\Enums\InboxItemStatus::Done->value,
+                'handled_at'  => now(),
+            ]);
         } catch (\Throwable $e) {
             // still
         }
@@ -90,6 +96,99 @@ class Inbox extends Component
         // Item ist raus → Auswahl leeren, nächster wird rechts gewählt.
         $this->selectedId = null;
         $this->nodeQuery = '';
+    }
+
+    /**
+     * Snooze: Item (samt Thread/Serie) für X Stunden aus dem Eingang nehmen.
+     * listForUser blendet Items mit snoozed_until in der Zukunft aus; danach
+     * taucht die Einheit wieder auf. Status = Snoozed (nicht „handled").
+     */
+    public function snooze(int $hours = 4): void
+    {
+        $item = $this->currentInboxItem();
+        if (!$item) {
+            return;
+        }
+        try {
+            $this->setGroupStatus($item, [
+                'status'        => \Platform\Inbox\Enums\InboxItemStatus::Snoozed->value,
+                'snoozed_until' => now()->addHours(max(1, $hours)),
+            ]);
+        } catch (\Throwable $e) {
+            // still
+        }
+
+        $this->selectedId = null;
+        $this->nodeQuery = '';
+    }
+
+    /**
+     * → Aufgabe: aus dem Item eine Planner-Aufgabe machen (Handoff). Der
+     * InboxHandoffService trägt Betreff/Body + Absender rüber und merkt sich den
+     * Handoff (idempotent). Das Item bleibt im Eingang, bis es erledigt wird.
+     */
+    public function toTask(): void
+    {
+        $this->handoff('itemToPlannerTask', 'Aufgabe angelegt.');
+    }
+
+    /** → Ticket: aus dem Item ein Helpdesk-Ticket machen (Handoff, idempotent). */
+    public function toTicket(): void
+    {
+        $this->handoff('itemToHelpdeskTicket', 'Ticket angelegt.');
+    }
+
+    /** Gemeinsamer Handoff-Aufruf für → Aufgabe / → Ticket. */
+    protected function handoff(string $method, string $okMessage): void
+    {
+        $item = $this->currentInboxItem();
+        if (!$item) {
+            return;
+        }
+        $svc = \Platform\Inbox\Services\InboxHandoffService::class;
+        if (!class_exists($svc)) {
+            return;
+        }
+        try {
+            $result = app($svc)->{$method}($item, (int) $item->user_id);
+            $this->notice = $result ? $okMessage : 'Ziel-Modul nicht verfügbar.';
+        } catch (\Throwable $e) {
+            // still
+        }
+    }
+
+    /**
+     * Status/Attribute auf die ganze Einheit anwenden — Meeting-Serie (iCalUId)
+     * bzw. Mail-Thread (conversation_id), sonst nur das Item. So verschwindet der
+     * kollabierte Listeneintrag als Ganzes (statt dass die nächste Occurrence /
+     * die nächste Thread-Mail sofort wieder als Repräsentant auftaucht).
+     *
+     * @param  array<string,mixed>  $attrs
+     */
+    protected function setGroupStatus(\Platform\Inbox\Models\InboxItem $item, array $attrs): void
+    {
+        \Platform\Inbox\Models\InboxItem::query()
+            ->whereIn('id', $this->groupItemIds($item))
+            ->update($attrs);
+    }
+
+    /** IDs der ganzen Einheit (Serie/Thread) inkl. des Items selbst. */
+    protected function groupItemIds(\Platform\Inbox\Models\InboxItem $item): array
+    {
+        $col = !empty($item->ical_uid)
+            ? 'ical_uid'
+            : (!empty($item->conversation_id) ? 'conversation_id' : null);
+
+        if (!$col) {
+            return [(int) $item->id];
+        }
+
+        return \Platform\Inbox\Models\InboxItem::query()
+            ->where('user_id', $item->user_id)
+            ->where($col, $item->{$col})
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**

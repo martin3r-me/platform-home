@@ -101,10 +101,17 @@
                 {{-- Action-Bar: triagieren & daraus Arbeit machen (kein Antworten) --}}
                 <div class="flex flex-wrap gap-2">
                     <x-nx-button variant="primary" size="sm" wire:click="markDone" wire:loading.attr="disabled">Erledigt</x-nx-button>
-                    <x-nx-button variant="secondary" size="sm">Snooze</x-nx-button>
-                    <x-nx-button variant="secondary" size="sm">→ Aufgabe</x-nx-button>
-                    <x-nx-button variant="secondary" size="sm">→ Ticket</x-nx-button>
+                    <x-nx-button variant="secondary" size="sm" wire:click="snooze(4)" wire:loading.attr="disabled">Snooze 4h</x-nx-button>
+                    <x-nx-button variant="secondary" size="sm" wire:click="toTask" wire:loading.attr="disabled">→ Aufgabe</x-nx-button>
+                    <x-nx-button variant="secondary" size="sm" wire:click="toTicket" wire:loading.attr="disabled">→ Ticket</x-nx-button>
                 </div>
+
+                @if($notice !== '')
+                    <div class="flex items-center gap-2 text-xs font-medium text-[color:var(--nx-success)]">
+                        @svg('heroicon-o-check-circle', 'w-4 h-4')
+                        {{ $notice }}
+                    </div>
+                @endif
 
                 @if(!empty($selected['summary']))
                     <x-nx-callout variant="info" title="KI-Zusammenfassung">
