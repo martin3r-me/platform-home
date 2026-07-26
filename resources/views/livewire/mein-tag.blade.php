@@ -4,7 +4,30 @@
     </x-slot>
 
     <x-slot name="sidebar">
-        @include('home::partials.inner-sidebar')
+        <x-ui-page-sidebar title="Mein Tag" icon="heroicon-o-sun" width="w-72" :defaultOpen="true" side="left">
+            <div class="space-y-6 p-4">
+                <div>
+                    <span class="px-1 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">Heute</span>
+                    <div class="mt-1 space-y-0.5">
+                        <x-nx-property-row icon="heroicon-o-fire" label="Streak">{{ $streak > 0 ? $streak . ($streak === 1 ? ' Tag' : ' Tage') : '—' }}</x-nx-property-row>
+                        <x-nx-property-row icon="heroicon-o-check-circle" label="Check-in">{{ $todayCheckin ? 'erledigt' : 'offen' }}</x-nx-property-row>
+                        <x-nx-property-row icon="heroicon-o-clipboard-document-check" label="Offene To-dos">{{ count($openTodos) }}</x-nx-property-row>
+                    </div>
+                </div>
+
+                @php $goal = trim((string) ($todayCheckin['daily_goal'] ?? '')); @endphp
+                @if($goal !== '')
+                    <div>
+                        <span class="px-1 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">Tagesziel</span>
+                        <p class="mt-1 px-1 text-sm leading-relaxed text-[color:var(--nx-text)]">{{ $goal }}</p>
+                    </div>
+                @else
+                    <x-nx-button variant="secondary" class="w-full justify-start" x-data @click="$dispatch('open-modal-checkin')">
+                        @svg('heroicon-o-check-circle', 'w-4 h-4') Jetzt einchecken
+                    </x-nx-button>
+                @endif
+            </div>
+        </x-ui-page-sidebar>
     </x-slot>
 
     <x-ui-page-container width="contained">
