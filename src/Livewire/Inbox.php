@@ -195,6 +195,11 @@ class Inbox extends Component
      * Item an einen Org-Knoten hängen — der Kern der Inbox: Dinge in die
      * Organisation hängen. Ist das Item schon promotet, hängt auch das Meeting an
      * denselben Knoten (Wissen fließt in den Puls; Zeit läuft separat übers Item).
+     *
+     * Ein Termin hängt an GENAU EINEM Kontext: ein neuer Attach ERSETZT den
+     * bestehenden (statt zu addieren). So kann nicht jede/r Beteiligte den Termin
+     * an einen anderen Knoten hängen — der zuletzt gesetzte gilt für die ganze
+     * Einheit (Serie/Thread), inkl. der automatisch gebuchten Zeiten.
      */
     public function attachNode(int $entityId): void
     {
@@ -205,6 +210,15 @@ class Inbox extends Component
 
         $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
         try {
+            // Replace statt addieren: erst alle bisherigen (anderen) Knoten der
+            // Einheit lösen — detachNode nimmt Item, Meeting UND Geschwister mit.
+            foreach (app($svc)->linksFor($item) as $existing) {
+                $existingId = (int) ($existing['id'] ?? 0);
+                if ($existingId && $existingId !== $entityId) {
+                    $this->detachNode($existingId);
+                }
+            }
+
             app($svc)->link($item, $entityId);
 
             $bridge = \Platform\Organization\Services\EntityDimensionBridge::class;
