@@ -24,6 +24,9 @@ class Inbox extends Component
     /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
     public string $notice = '';
 
+    /** Terminal-Kontext des gewählten echten Items (für dispatch('comms') in rendered()). */
+    protected ?array $commsCtx = null;
+
     public function mount(): void
     {
         $this->selectFirst();
@@ -728,6 +731,18 @@ class Inbox extends Component
             $selected['related'] = $ctx['related'] ?? null;
         }
 
+        // Echtes Item ans Terminal pinnen → die organization-„Verknüpfungen"-App
+        // (DimensionLinks) erscheint und übernimmt das Hängen an Org-Knoten.
+        // Kein eigener Attach-Flow in home mehr nötig (Morph-Alias: inbox_item).
+        $this->commsCtx = ($selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id']))
+            ? [
+                'model'   => 'inbox_item',
+                'modelId' => (int) $selected['inbox_id'],
+                'subject' => (string) ($selected['subject'] ?? $selected['sender'] ?? 'Eingang'),
+                'source'  => 'home.inbox',
+            ]
+            : null;
+
         return view('home::livewire.inbox', [
             'channels'    => $this->channels($counts),
             'statuses'    => $this->statuses(),
@@ -735,5 +750,20 @@ class Inbox extends Component
             'selected'    => $selected,
             'nodeResults' => $this->nodeResults(),
         ])->layout('platform::layouts.app');
+    }
+
+    /**
+     * Plattform-Standard: den Kontext des gewählten Items ans Terminal dispatchen.
+     * model=null → kein Pin (Dummy/kein Item gewählt). Das Terminal surft darauf
+     * die kontext-agnostische „Verknüpfungen"-App (organization) ein.
+     */
+    public function rendered(): void
+    {
+        $this->dispatch('comms', $this->commsCtx ?? [
+            'model'   => null,
+            'modelId' => null,
+            'subject' => 'Eingang',
+            'source'  => 'home.inbox',
+        ]);
     }
 }
