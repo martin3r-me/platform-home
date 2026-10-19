@@ -683,23 +683,17 @@ class Inbox extends Component
     }
 
     /**
-     * Kanal-Detail eines Items laden (Anker oder Facette). Meeting/Mail/Call/Task/
-     * Ticket über die Inbox-Contracts, Aufnahme über die Core-InboxQuery.
+     * Kanal-Detail eines Items (Anker oder Facette) über die EINE Core-InboxQuery.
+     * StreamQuery::detailForItem merged pro Kanal den registrierten SourceDetail-
+     * Provider dazu (Meeting/Mail/Call/Task/Ticket via Adapter, Aufnahme nativ) —
+     * home braucht die 5 Inbox*QueryContracts dafür nicht mehr.
      *
      * @return array<string,mixed>
      */
     protected function detailFor(?string $channel, int $inboxId): array
     {
-        $contract = match ($channel) {
-            'meeting' => \Platform\Inbox\Contracts\InboxMeetingQueryContract::class,
-            'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
-            'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
-            'task'    => \Platform\Inbox\Contracts\InboxTaskQueryContract::class,
-            'ticket'  => \Platform\Inbox\Contracts\InboxTicketQueryContract::class,
-            'recording' => \Platform\Core\Inbox\Contracts\InboxQuery::class,
-            default   => null,
-        };
-        if (!$contract || !interface_exists($contract) || $inboxId <= 0) {
+        $contract = \Platform\Core\Inbox\Contracts\InboxQuery::class;
+        if (!$channel || $inboxId <= 0 || !interface_exists($contract)) {
             return [];
         }
         try {
