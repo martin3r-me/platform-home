@@ -509,6 +509,62 @@ class Inbox extends Component
         ], $rows);
     }
 
+    /**
+     * Echte Aufnahme-Items über die quellen-agnostische Core-InboxQuery.
+     * Aufnahmen (Plaud, Roh-Audio, künftige Anbieter) laufen über whisper in den
+     * Eingang und liegen als inbox_items (channel='recording') — anders als die
+     * 5 Inbox*QueryContracts, die aus den Quell-Modulen lesen. Schrittweise sollen
+     * alle Kanäle auf diese Core-Query wandern.
+     */
+    protected function realRecordings(): array
+    {
+        $contract = \Platform\Core\Inbox\Contracts\InboxQuery::class;
+        if (!interface_exists($contract)) {
+            return [];
+        }
+
+        $user = Auth::user();
+        if (!$user || !$user->currentTeam) {
+            return [];
+        }
+
+        try {
+            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 'recording', null, 25);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_map(fn ($m) => [
+            'id'            => 60000 + (int) $m['id'],   // eigener ID-Raum (Aufnahmen)
+            'inbox_id'      => (int) $m['id'],
+            'real'          => true,
+            'channel'       => 'recording',
+            'channel_label' => 'Aufnahme',
+            'icon'          => 'heroicon-o-microphone',
+            'sender'        => $m['sender_label'] ?? 'Aufnahme',
+            'subject'       => $m['subject'] ?? '',
+            'preview'       => $m['preview'] ?? '',
+            'time'          => $this->recTime($m['received_at'] ?? null),
+            'unread'        => true,
+            'status'        => 'new',
+        ], $rows);
+    }
+
+    /** ISO-Zeit → kurzes Label (heute: H:i, sonst Datum). */
+    protected function recTime(?string $iso): string
+    {
+        if (!$iso) {
+            return '';
+        }
+        try {
+            $c = \Illuminate\Support\Carbon::parse($iso);
+
+            return $c->isToday() ? $c->format('H:i') : $c->locale('de')->isoFormat('dd D.M.');
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
     /** Die gemergte Gesamtliste (echte Items + Dummies), ungefiltert. */
     protected function mergedItems(): array
     {
@@ -522,6 +578,7 @@ class Inbox extends Component
             'call'    => $this->realCalls(),
             'task'    => $this->realTasks(),
             'ticket'  => $this->realTickets(),
+            'recording' => $this->realRecordings(),
         ] as $channel => $real) {
             if (!empty($real)) {
                 $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== $channel));
@@ -568,6 +625,8 @@ class Inbox extends Component
                 'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
                 'task'    => \Platform\Inbox\Contracts\InboxTaskQueryContract::class,
                 'ticket'  => \Platform\Inbox\Contracts\InboxTicketQueryContract::class,
+                // Aufnahme-Detail (Segmente/Dauer) über die Core-Query + RecordingSourceDetail.
+                'recording' => \Platform\Core\Inbox\Contracts\InboxQuery::class,
                 default   => null,
             };
             if ($contract && interface_exists($contract)) {
