@@ -83,15 +83,12 @@ class Inbox extends Component
      */
     public function markDone(): void
     {
-        $item = $this->currentInboxItem();
-        if (!$item) {
+        $id = $this->currentRealItemId();
+        if (!$id) {
             return;
         }
         try {
-            $this->setGroupStatus($item, [
-                'status'      => \Platform\Inbox\Enums\InboxItemStatus::Done->value,
-                'handled_at'  => now(),
-            ]);
+            app(\Platform\Core\Inbox\Services\TriageService::class)->markDone($id);
         } catch (\Throwable $e) {
             // still
         }
@@ -108,15 +105,12 @@ class Inbox extends Component
      */
     public function snooze(int $hours = 4): void
     {
-        $item = $this->currentInboxItem();
-        if (!$item) {
+        $id = $this->currentRealItemId();
+        if (!$id) {
             return;
         }
         try {
-            $this->setGroupStatus($item, [
-                'status'        => \Platform\Inbox\Enums\InboxItemStatus::Snoozed->value,
-                'snoozed_until' => now()->addHours(max(1, $hours)),
-            ]);
+            app(\Platform\Core\Inbox\Services\TriageService::class)->snooze($id, $hours);
         } catch (\Throwable $e) {
             // still
         }
@@ -161,37 +155,16 @@ class Inbox extends Component
     }
 
     /**
-     * Status/Attribute auf die ganze Einheit anwenden — Meeting-Serie (iCalUId)
-     * bzw. Mail-Thread (conversation_id), sonst nur das Item. So verschwindet der
-     * kollabierte Listeneintrag als Ganzes (statt dass die nächste Occurrence /
-     * die nächste Thread-Mail sofort wieder als Repräsentant auftaucht).
-     *
-     * @param  array<string,mixed>  $attrs
+     * Reale Inbox-Item-ID des aktuell gewählten Items (oder null bei Dummy/keins).
+     * Echte Items liegen im ID-Raum ab 10000 (Kanal-Offset je 10000) — die reale
+     * inbox_id ist der Rest modulo 10000.
      */
-    protected function setGroupStatus(\Platform\Inbox\Models\InboxItem $item, array $attrs): void
+    protected function currentRealItemId(): ?int
     {
-        \Platform\Inbox\Models\InboxItem::query()
-            ->whereIn('id', $this->groupItemIds($item))
-            ->update($attrs);
-    }
-
-    /** IDs der ganzen Einheit (Serie/Thread) inkl. des Items selbst. */
-    protected function groupItemIds(\Platform\Inbox\Models\InboxItem $item): array
-    {
-        $col = !empty($item->ical_uid)
-            ? 'ical_uid'
-            : (!empty($item->conversation_id) ? 'conversation_id' : null);
-
-        if (!$col) {
-            return [(int) $item->id];
+        if (!$this->selectedId || $this->selectedId < 10000) {
+            return null;
         }
-
-        return \Platform\Inbox\Models\InboxItem::query()
-            ->where('user_id', $item->user_id)
-            ->where($col, $item->{$col})
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        return $this->selectedId % 10000;
     }
 
     /**
@@ -273,13 +246,11 @@ class Inbox extends Component
     /** Der aktuell gewählte ECHTE Inbox-Datensatz (nur reale Items, ID ab 10000). */
     protected function currentInboxItem(): ?\Platform\Inbox\Models\InboxItem
     {
-        if (!$this->selectedId || $this->selectedId < 10000) {
+        $id = $this->currentRealItemId();
+        if (!$id || !class_exists(\Platform\Inbox\Models\InboxItem::class)) {
             return null;
         }
-        if (!class_exists(\Platform\Inbox\Models\InboxItem::class)) {
-            return null;
-        }
-        return \Platform\Inbox\Models\InboxItem::find($this->selectedId - 10000);
+        return \Platform\Inbox\Models\InboxItem::find($id);
     }
 
     /** Knoten-Suchtreffer für den Picker (soft-coupled über den Inbox-Service). */
