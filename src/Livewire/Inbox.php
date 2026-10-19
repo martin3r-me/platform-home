@@ -116,6 +116,38 @@ class Inbox extends Component
     }
 
     /**
+     * Aufnahme einem Termin zuordnen (manuell, aus den Vorschlägen im Pane).
+     * Ersetzt eine bestehende Zuordnung und reicht die Org-Verknüpfungen des
+     * Termins an die Aufnahme durch. Detail lädt beim Re-Render neu.
+     */
+    public function assignRecording(int $recordingInboxId, int $meetingInboxId): void
+    {
+        $svc = \Platform\Inbox\Services\InboxRecordingCorrelator::class;
+        if (!class_exists($svc)) {
+            return;
+        }
+        try {
+            app($svc)->assignToMeeting($recordingInboxId, $meetingInboxId);
+        } catch (\Throwable $e) {
+            // still — Zuordnung nicht möglich
+        }
+    }
+
+    /** Termin-Zuordnung einer Aufnahme wieder lösen. */
+    public function unassignRecording(int $recordingInboxId): void
+    {
+        $svc = \Platform\Inbox\Services\InboxRecordingCorrelator::class;
+        if (!class_exists($svc)) {
+            return;
+        }
+        try {
+            app($svc)->clearAssignment($recordingInboxId);
+        } catch (\Throwable $e) {
+            // still
+        }
+    }
+
+    /**
      * → Aufgabe: aus dem Item eine Planner-Aufgabe machen (Handoff). Der
      * InboxHandoffService trägt Betreff/Body + Absender rüber und merkt sich den
      * Handoff (idempotent). Das Item bleibt im Eingang, bis es erledigt wird.

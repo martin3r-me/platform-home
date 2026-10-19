@@ -4,14 +4,38 @@
     @if(!empty($item['linked_meeting']))
         <div class="flex items-center gap-2 rounded-[8px] border border-[color:var(--nx-line)] bg-[color:var(--nx-accent-soft)] px-3 py-2">
             @svg('heroicon-o-link', 'w-4 h-4 shrink-0 text-[color:var(--nx-accent)]')
-            <span class="text-xs text-[color:var(--nx-muted)]">Gehört zu Termin:</span>
+            <span class="shrink-0 text-xs text-[color:var(--nx-muted)]">Gehört zu Termin:</span>
             <span class="min-w-0 truncate text-sm font-medium text-[color:var(--nx-text)]">{{ $item['linked_meeting']['subject'] }}</span>
             @if(!empty($item['linked_meeting']['time']))
                 <span class="shrink-0 text-xs text-[color:var(--nx-faint)]">· {{ $item['linked_meeting']['time'] }}</span>
             @endif
             @if($item['linked_meeting']['auto'] ?? false)
-                <span class="ml-auto shrink-0 rounded-full bg-[color:var(--nx-accent)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--nx-on-accent)]">auto</span>
+                <span class="shrink-0 rounded-full bg-[color:var(--nx-accent)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--nx-on-accent)]">auto</span>
             @endif
+            <button type="button"
+                    wire:click="unassignRecording({{ (int) $item['inbox_id'] }})"
+                    class="ml-auto shrink-0 text-xs text-[color:var(--nx-faint)] underline-offset-2 hover:text-[color:var(--nx-text)] hover:underline">
+                lösen
+            </button>
+        </div>
+    @elseif(!empty($item['meeting_suggestions']))
+        <div class="rounded-[8px] border border-dashed border-[color:var(--nx-line)] p-3 space-y-2">
+            <div class="flex items-center gap-1.5 text-xs font-medium text-[color:var(--nx-muted)]">
+                @svg('heroicon-o-question-mark-circle', 'w-4 h-4 text-[color:var(--nx-faint)]')
+                Gehört diese Aufnahme zu einem Termin?
+            </div>
+            @foreach($item['meeting_suggestions'] as $sug)
+                <div class="flex items-center gap-2">
+                    <span class="min-w-0 flex-1 truncate text-sm text-[color:var(--nx-text)]">
+                        {{ $sug['subject'] }}
+                        @if(!empty($sug['time']))<span class="text-xs text-[color:var(--nx-faint)]">· {{ $sug['time'] }}</span>@endif
+                    </span>
+                    <x-nx-button size="sm" variant="secondary"
+                                 wire:click="assignRecording({{ (int) $item['inbox_id'] }}, {{ (int) $sug['inbox_id'] }})">
+                        Zuordnen
+                    </x-nx-button>
+                </div>
+            @endforeach
         </div>
     @endif
 
