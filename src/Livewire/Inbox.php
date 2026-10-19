@@ -19,8 +19,6 @@ class Inbox extends Component
     public string $channel = 'all';
     public string $status = 'all';
 
-    public string $nodeQuery = '';
-
     /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
     public string $notice = '';
 
@@ -95,7 +93,6 @@ class Inbox extends Component
 
         // Item ist raus → Auswahl leeren, nächster wird rechts gewählt.
         $this->selectedId = null;
-        $this->nodeQuery = '';
     }
 
     /**
@@ -116,7 +113,6 @@ class Inbox extends Component
         }
 
         $this->selectedId = null;
-        $this->nodeQuery = '';
     }
 
     /**
@@ -167,82 +163,6 @@ class Inbox extends Component
         return $this->selectedId % 10000;
     }
 
-    /**
-     * Item an einen Org-Knoten hängen — der Kern der Inbox: Dinge in die
-     * Organisation hängen. Ist das Item schon promotet, hängt auch das Meeting an
-     * denselben Knoten (Wissen fließt in den Puls; Zeit läuft separat übers Item).
-     *
-     * Ein Termin hängt an GENAU EINEM Kontext: ein neuer Attach ERSETZT den
-     * bestehenden (statt zu addieren). So kann nicht jede/r Beteiligte den Termin
-     * an einen anderen Knoten hängen — der zuletzt gesetzte gilt für die ganze
-     * Einheit (Serie/Thread), inkl. der automatisch gebuchten Zeiten.
-     */
-    public function attachNode(int $entityId): void
-    {
-        $item = $this->currentInboxItem();
-        if (!$item) {
-            return;
-        }
-
-        $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
-        try {
-            // Replace statt addieren: erst alle bisherigen (anderen) Knoten der
-            // Einheit lösen — detachNode nimmt Item, Meeting UND Geschwister mit.
-            foreach (app($svc)->linksFor($item) as $existing) {
-                $existingId = (int) ($existing['id'] ?? 0);
-                if ($existingId && $existingId !== $entityId) {
-                    $this->detachNode($existingId);
-                }
-            }
-
-            app($svc)->link($item, $entityId);
-
-            $bridge = \Platform\Organization\Services\EntityDimensionBridge::class;
-            if ($item->meeting_id && class_exists($bridge)) {
-                $bridge::createLink($entityId, 'meeting', (int) $item->meeting_id);
-            }
-
-            // Auto-Propagation über die Einheit: Meeting (iCalUId) → alle Beteiligten;
-            // Mail-Thread (conversation_id) → alle Mails des Threads. Nie Einzel-Item.
-            if (!empty($item->ical_uid)) {
-                app($svc)->linkSiblingsByIcalUid($item, $entityId);
-            } elseif (!empty($item->conversation_id)) {
-                app($svc)->linkSiblingsByConversation($item, $entityId);
-            }
-        } catch (\Throwable $e) {
-            // Organization nicht verfügbar → still, Kontext bleibt leer.
-        }
-
-        $this->nodeQuery = '';
-    }
-
-    public function detachNode(int $entityId): void
-    {
-        $item = $this->currentInboxItem();
-        if (!$item) {
-            return;
-        }
-        $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
-        try {
-            app($svc)->unlink($item, $entityId);
-
-            // Symmetrisch zu attachNode: auch das Meeting vom Knoten lösen.
-            $bridge = \Platform\Organization\Services\EntityDimensionBridge::class;
-            if ($item->meeting_id && class_exists($bridge)) {
-                $bridge::deleteLink($entityId, 'meeting', (int) $item->meeting_id);
-            }
-
-            // Auto-Propagation zurücknehmen — für die ganze Einheit (Serie/Thread).
-            if (!empty($item->ical_uid)) {
-                app($svc)->unlinkSiblingsByIcalUid($item, $entityId);
-            } elseif (!empty($item->conversation_id)) {
-                app($svc)->unlinkSiblingsByConversation($item, $entityId);
-            }
-        } catch (\Throwable $e) {
-            // still
-        }
-    }
-
     /** Der aktuell gewählte ECHTE Inbox-Datensatz (nur reale Items, ID ab 10000). */
     protected function currentInboxItem(): ?\Platform\Inbox\Models\InboxItem
     {
@@ -251,24 +171,6 @@ class Inbox extends Component
             return null;
         }
         return \Platform\Inbox\Models\InboxItem::find($id);
-    }
-
-    /** Knoten-Suchtreffer für den Picker (soft-coupled über den Inbox-Service). */
-    protected function nodeResults(): array
-    {
-        $svc = \Platform\Inbox\Services\InboxEntityLinkService::class;
-        if (!class_exists($svc) || trim($this->nodeQuery) === '') {
-            return [];
-        }
-        $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
-            return [];
-        }
-        try {
-            return app($svc)->search($this->nodeQuery, $user->currentTeam->id, 12);
-        } catch (\Throwable $e) {
-            return [];
-        }
     }
 
     protected function matches(array $item): bool
@@ -414,24 +316,6 @@ class Inbox extends Component
                 'body' => "Pflichtkurs: KI-nativer Betrieb — Grundlagen\nFällig: in 3 Tagen\nFortschritt: 20 %\n\nDieser Kurs wurde deiner Rolle zugewiesen. Bitte zeitnah abschließen.",
                 'action_label' => 'Kurs fortsetzen',
             ],
-        ];
-    }
-
-    /**
-     * Org-Kontext je Item (an welchen Knoten hängt es, was noch dranhängt) — der Kern:
-     * Dinge in die Organisation hängen und Kontext ziehen, nicht kommunizieren.
-     */
-    protected function contexts(): array
-    {
-        return [
-            1 => ['chips' => [['label' => 'Konstantin Broich', 'icon' => 'heroicon-o-user'], ['label' => 'Rheingedeck', 'icon' => 'heroicon-o-building-storefront']], 'related' => '3 offene Aufgaben · Angebot #12'],
-            2 => ['chips' => [['label' => 'Digital Service Theke', 'icon' => 'heroicon-o-rectangle-group'], ['label' => 'Change CP-001', 'icon' => 'heroicon-o-arrows-right-left']], 'related' => 'Change aktiv · 4 Meilensteine'],
-            3 => ['chips' => [['label' => 'IT-Support', 'icon' => 'heroicon-o-lifebuoy']], 'related' => 'Ticket #142 · Board IT-Support'],
-            4 => ['chips' => [['label' => 'Syltjunkie', 'icon' => 'heroicon-o-building-storefront']], 'related' => 'Neukunde · noch kein Projekt'],
-            5 => ['chips' => [['label' => 'IT / Infrastruktur', 'icon' => 'heroicon-o-server-stack']], 'related' => 'MDM-Rollout'],
-            6 => ['chips' => [['label' => 'Buchhaltung', 'icon' => 'heroicon-o-banknotes']], 'related' => 'Kontierung HGK'],
-            7 => ['chips' => [['label' => 'Academy', 'icon' => 'heroicon-o-academic-cap']], 'related' => 'Pflichtkurs'],
-            8 => ['chips' => [['label' => 'Philip Weber', 'icon' => 'heroicon-o-user']], 'related' => 'Marketing'],
         ];
     }
 
@@ -696,10 +580,6 @@ class Inbox extends Component
                     // Detail nicht verfügbar → Basisdaten aus der Liste bleiben.
                 }
             }
-        } elseif ($selected) {
-            $ctx = $this->contexts()[$selected['id']] ?? [];
-            $selected['context'] = $ctx['chips'] ?? [];
-            $selected['related'] = $ctx['related'] ?? null;
         }
 
         // Echtes Item ans Terminal pinnen → die organization-„Verknüpfungen"-App
@@ -723,7 +603,6 @@ class Inbox extends Component
             'statuses'    => $this->statuses(),
             'items'       => $filtered,
             'selected'    => $selected,
-            'nodeResults' => $this->nodeResults(),
         ])->layout('platform::layouts.app');
     }
 
