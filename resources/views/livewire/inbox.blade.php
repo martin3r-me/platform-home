@@ -71,6 +71,16 @@
                                                 Thread · {{ $it['thread_count'] }}
                                             </span>
                                         @endif
+                                        @if(!empty($it['facets']))
+                                            @php($facetListMeta = ['recording' => ['Aufnahme', 'heroicon-o-microphone'], 'mail' => ['Mail', 'heroicon-o-envelope'], 'call' => ['Anruf', 'heroicon-o-phone'], 'meeting' => ['Meeting', 'heroicon-o-calendar-days'], 'message' => ['Nachricht', 'heroicon-o-chat-bubble-left-right']])
+                                            @foreach(collect($it['facets'])->pluck('channel')->unique() as $fch)
+                                                @php([$fLabel, $fIcon] = $facetListMeta[$fch] ?? ['Verknüpft', 'heroicon-o-link'])
+                                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color:var(--nx-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--nx-muted)]">
+                                                    @svg($fIcon, 'h-3 w-3')
+                                                    {{ $fLabel }}
+                                                </span>
+                                            @endforeach
+                                        @endif
                                         <span class="truncate text-xs text-[color:var(--nx-faint)]">{{ $it['preview'] }}</span>
                                     </div>
                                 </div>
@@ -123,32 +133,20 @@
                      „Verknüpfungen" (organization DimensionLinks) — das gewählte
                      Item wird via dispatch('comms') ans Terminal gepinnt. --}}
 
-                {{-- Kanal-spezifischer Body --}}
-                @switch($selected['channel'])
-                    @case('mail')
-                        @include('home::partials.inbox.body-mail', ['item' => $selected])
-                    @break
-                    @case('message')
-                        @include('home::partials.inbox.body-message', ['item' => $selected])
-                    @break
-                    @case('meeting')
-                        @include('home::partials.inbox.body-meeting', ['item' => $selected])
-                    @break
-                    @case('task')
-                        @include('home::partials.inbox.body-task', ['item' => $selected])
-                    @break
-                    @case('ticket')
-                        @include('home::partials.inbox.body-ticket', ['item' => $selected])
-                    @break
-                    @case('call')
-                        @include('home::partials.inbox.body-call', ['item' => $selected])
-                    @break
-                    @case('recording')
-                        @include('home::partials.inbox.body-recording', ['item' => $selected])
-                    @break
-                    @default
-                        @include('home::partials.inbox.body-system', ['item' => $selected])
-                @endswitch
+                {{-- Kanal-spezifischer Body (Anker der Einheit) --}}
+                @include('home::partials.inbox.body-dispatch', ['item' => $selected, 'inUnit' => false])
+
+                {{-- Facetten der Einheit (z.B. die Aufnahme unter dem Meeting) --}}
+                @php($facetMeta = ['recording' => ['Aufnahme', 'heroicon-o-microphone'], 'mail' => ['Mail', 'heroicon-o-envelope'], 'call' => ['Anruf', 'heroicon-o-phone'], 'meeting' => ['Meeting', 'heroicon-o-calendar-days'], 'message' => ['Nachricht', 'heroicon-o-chat-bubble-left-right']])
+                @foreach($selected['facet_details'] ?? [] as $facet)
+                    @php([$facetLabel, $facetIcon] = $facetMeta[$facet['channel'] ?? ''] ?? ['Verknüpft', 'heroicon-o-link'])
+                    <div class="mt-6 border-t border-[color:var(--nx-line)] pt-4">
+                        <div class="mb-3 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">
+                            @svg($facetIcon, 'w-3.5 h-3.5') {{ $facetLabel }}
+                        </div>
+                        @include('home::partials.inbox.body-dispatch', ['item' => $facet, 'inUnit' => true])
+                    </div>
+                @endforeach
             </div>
         @else
             <x-nx-empty icon="heroicon-o-inbox">

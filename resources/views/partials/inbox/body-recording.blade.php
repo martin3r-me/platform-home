@@ -1,7 +1,8 @@
 {{-- Aufnahme: Termin-Zuordnung + KI-Zusammenfassung + Transcript --}}
+@php($inUnit = $inUnit ?? false)
 <div class="space-y-4">
-    {{-- Zugeordneter Termin --}}
-    @if(!empty($item['linked_meeting']))
+    {{-- Zugeordneter Termin (nur standalone — als Facette unter dem Meeting redundant) --}}
+    @if(!$inUnit && !empty($item['linked_meeting']))
         <div class="flex items-center gap-2 rounded-[8px] border border-[color:var(--nx-line)] bg-[color:var(--nx-accent-soft)] px-3 py-2">
             @svg('heroicon-o-link', 'w-4 h-4 shrink-0 text-[color:var(--nx-accent)]')
             <span class="shrink-0 text-xs text-[color:var(--nx-muted)]">Gehört zu Termin:</span>
@@ -18,7 +19,7 @@
                 lösen
             </button>
         </div>
-    @elseif(!empty($item['meeting_suggestions']))
+    @elseif(!$inUnit && !empty($item['meeting_suggestions']))
         <div class="rounded-[8px] border border-dashed border-[color:var(--nx-line)] p-3 space-y-2">
             <div class="flex items-center gap-1.5 text-xs font-medium text-[color:var(--nx-muted)]">
                 @svg('heroicon-o-question-mark-circle', 'w-4 h-4 text-[color:var(--nx-faint)]')

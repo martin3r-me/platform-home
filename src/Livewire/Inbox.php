@@ -618,7 +618,97 @@ class Inbox extends Component
             }
         }
 
-        return array_merge($prepend, $all);
+        return $this->consolidateUnits(array_merge($prepend, $all));
+    }
+
+    /**
+     * Einheit-Konsolidierung (2→1): absorbierte Mitglieder ausblenden, den Anker
+     * mit seinen Facetten annotieren. Nutzt den quellen-agnostischen Core-
+     * UnitResolver (Keys ∪ Links). Key-Gruppen (Mail-Thread/Meeting-Serie) falten
+     * bereits die Quell-Contracts — hier kommt die Link-Faltung dazu (Aufnahme
+     * unter Meeting). Ohne UnitResolver unverändert zurück.
+     *
+     * @param  array<int,array<string,mixed>>  $items
+     * @return array<int,array<string,mixed>>
+     */
+    protected function consolidateUnits(array $items): array
+    {
+        $resolverClass = \Platform\Core\Inbox\Services\UnitResolver::class;
+        if (!class_exists($resolverClass)) {
+            return $items;
+        }
+        try {
+            $resolver = app($resolverClass);
+        } catch (\Throwable $e) {
+            return $items;
+        }
+
+        // Präsente echte Item-IDs → Core löst Anker + Facetten auf (nur Verlinktes).
+        $presentIds = [];
+        foreach ($items as $it) {
+            if (!empty($it['inbox_id'])) {
+                $presentIds[] = (int) $it['inbox_id'];
+            }
+        }
+        if (!$presentIds) {
+            return $items;
+        }
+
+        try {
+            $res = $resolver->consolidate($presentIds);
+        } catch (\Throwable $e) {
+            return $items;
+        }
+        $anchorOf = $res['anchorOf'];   // inbox_id => Anker (self, wenn Anker fehlt)
+        $facetsOf = $res['facetsOf'];   // Anker => [['channel','inbox_id'], …]
+
+        // Nur Anker (oder Self-Anker) behalten; Dummies unverändert durchlassen.
+        $out = [];
+        foreach ($items as $it) {
+            $iid = (int) ($it['inbox_id'] ?? 0);
+            if ($iid <= 0) {
+                $out[] = $it;
+                continue;
+            }
+            if (($anchorOf[$iid] ?? $iid) !== $iid) {
+                continue; // absorbiertes Mitglied → ausgeblendet
+            }
+            if (!empty($facetsOf[$iid])) {
+                $it['facets'] = $facetsOf[$iid];
+            }
+            $out[] = $it;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Kanal-Detail eines Items laden (Anker oder Facette). Meeting/Mail/Call/Task/
+     * Ticket über die Inbox-Contracts, Aufnahme über die Core-InboxQuery.
+     *
+     * @return array<string,mixed>
+     */
+    protected function detailFor(?string $channel, int $inboxId): array
+    {
+        $contract = match ($channel) {
+            'meeting' => \Platform\Inbox\Contracts\InboxMeetingQueryContract::class,
+            'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
+            'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
+            'task'    => \Platform\Inbox\Contracts\InboxTaskQueryContract::class,
+            'ticket'  => \Platform\Inbox\Contracts\InboxTicketQueryContract::class,
+            'recording' => \Platform\Core\Inbox\Contracts\InboxQuery::class,
+            default   => null,
+        };
+        if (!$contract || !interface_exists($contract) || $inboxId <= 0) {
+            return [];
+        }
+        try {
+            $detail = app($contract)->detailForItem($inboxId);
+
+            return is_array($detail) ? $detail : [];
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     /** Vorselektion: das erste Item der aktuellen Kanal/Status-Ansicht wählen. */
@@ -650,27 +740,27 @@ class Inbox extends Component
         }
 
         if ($selected && ($selected['real'] ?? false)) {
-            // Kanal-spezifisches Detail (Meeting-Agenda/Thread) nachladen.
-            $contract = match ($selected['channel'] ?? '') {
-                'meeting' => \Platform\Inbox\Contracts\InboxMeetingQueryContract::class,
-                'mail'    => \Platform\Inbox\Contracts\InboxMailQueryContract::class,
-                'call'    => \Platform\Inbox\Contracts\InboxCallQueryContract::class,
-                'task'    => \Platform\Inbox\Contracts\InboxTaskQueryContract::class,
-                'ticket'  => \Platform\Inbox\Contracts\InboxTicketQueryContract::class,
-                // Aufnahme-Detail (Segmente/Dauer) über die Core-Query + RecordingSourceDetail.
-                'recording' => \Platform\Core\Inbox\Contracts\InboxQuery::class,
-                default   => null,
-            };
-            if ($contract && interface_exists($contract)) {
-                try {
-                    $detail = app($contract)->detailForItem((int) $selected['inbox_id']);
-                    if ($detail) {
-                        $selected = array_merge($selected, $detail);
-                    }
-                } catch (\Throwable $e) {
-                    // Detail nicht verfügbar → Basisdaten aus der Liste bleiben.
+            // Anker-Detail nachladen …
+            $selected = array_merge(
+                $selected,
+                $this->detailFor($selected['channel'] ?? null, (int) $selected['inbox_id'])
+            );
+
+            // … und die Facetten der Einheit (z.B. die Aufnahme unter dem Meeting)
+            // als eigene Detail-Blöcke stapeln.
+            $facetDetails = [];
+            foreach ($selected['facets'] ?? [] as $facet) {
+                $fid = (int) ($facet['inbox_id'] ?? 0);
+                $fch = $facet['channel'] ?? null;
+                if ($fid <= 0 || ! $fch) {
+                    continue;
+                }
+                $detail = $this->detailFor($fch, $fid);
+                if ($detail) {
+                    $facetDetails[] = array_merge($detail, ['channel' => $fch, 'inbox_id' => $fid]);
                 }
             }
+            $selected['facet_details'] = $facetDetails;
         }
 
         // Echtes Item ans Terminal pinnen → die organization-„Verknüpfungen"-App
