@@ -122,12 +122,12 @@ class Inbox extends Component
      */
     public function assignRecording(int $recordingInboxId, int $meetingInboxId): void
     {
-        $svc = \Platform\Inbox\Services\InboxRecordingCorrelator::class;
-        if (!class_exists($svc)) {
+        $contract = \Platform\Core\Inbox\Contracts\ItemLinking::class;
+        if (!interface_exists($contract)) {
             return;
         }
         try {
-            app($svc)->assignToMeeting($recordingInboxId, $meetingInboxId);
+            app($contract)->assign($recordingInboxId, $meetingInboxId);
         } catch (\Throwable $e) {
             // still — Zuordnung nicht möglich
         }
@@ -136,47 +136,46 @@ class Inbox extends Component
     /** Termin-Zuordnung einer Aufnahme wieder lösen. */
     public function unassignRecording(int $recordingInboxId): void
     {
-        $svc = \Platform\Inbox\Services\InboxRecordingCorrelator::class;
-        if (!class_exists($svc)) {
+        $contract = \Platform\Core\Inbox\Contracts\ItemLinking::class;
+        if (!interface_exists($contract)) {
             return;
         }
         try {
-            app($svc)->clearAssignment($recordingInboxId);
+            app($contract)->unassign($recordingInboxId);
         } catch (\Throwable $e) {
             // still
         }
     }
 
     /**
-     * → Aufgabe: aus dem Item eine Planner-Aufgabe machen (Handoff). Der
-     * InboxHandoffService trägt Betreff/Body + Absender rüber und merkt sich den
-     * Handoff (idempotent). Das Item bleibt im Eingang, bis es erledigt wird.
+     * → Aufgabe: aus dem Item eine Planner-Aufgabe machen, über die Core-ItemHandoff-
+     * Naht (idempotent, Ziel-Modul-blind). Das Item bleibt im Eingang, bis erledigt.
      */
     public function toTask(): void
     {
-        $this->handoff('itemToPlannerTask', 'Aufgabe angelegt.');
+        $this->handoff('task', 'Aufgabe angelegt.');
     }
 
     /** → Ticket: aus dem Item ein Helpdesk-Ticket machen (Handoff, idempotent). */
     public function toTicket(): void
     {
-        $this->handoff('itemToHelpdeskTicket', 'Ticket angelegt.');
+        $this->handoff('ticket', 'Ticket angelegt.');
     }
 
     /** Gemeinsamer Handoff-Aufruf für → Aufgabe / → Ticket. */
-    protected function handoff(string $method, string $okMessage): void
+    protected function handoff(string $target, string $okMessage): void
     {
-        $item = $this->currentInboxItem();
-        if (!$item) {
+        $id = $this->currentRealItemId();
+        if (!$id) {
             return;
         }
-        $svc = \Platform\Inbox\Services\InboxHandoffService::class;
-        if (!class_exists($svc)) {
+        $contract = \Platform\Core\Inbox\Contracts\ItemHandoff::class;
+        if (!interface_exists($contract)) {
             return;
         }
         try {
-            $result = app($svc)->{$method}($item, (int) $item->user_id);
-            $this->notice = $result ? $okMessage : 'Ziel-Modul nicht verfügbar.';
+            $ok = app($contract)->handoff($id, $target);
+            $this->notice = $ok ? $okMessage : 'Ziel-Modul nicht verfügbar.';
         } catch (\Throwable $e) {
             // still
         }
@@ -195,15 +194,6 @@ class Inbox extends Component
         return $this->selectedId % 10000;
     }
 
-    /** Der aktuell gewählte ECHTE Inbox-Datensatz (nur reale Items, ID ab 10000). */
-    protected function currentInboxItem(): ?\Platform\Inbox\Models\InboxItem
-    {
-        $id = $this->currentRealItemId();
-        if (!$id || !class_exists(\Platform\Inbox\Models\InboxItem::class)) {
-            return null;
-        }
-        return \Platform\Inbox\Models\InboxItem::find($id);
-    }
 
     protected function matches(array $item): bool
     {
@@ -664,14 +654,14 @@ class Inbox extends Component
 
         // Echtes Item ans Terminal pinnen → die organization-„Verknüpfungen"-App
         // (DimensionLinks) erscheint und übernimmt das Hängen an Org-Knoten.
-        // Kein eigener Attach-Flow in home mehr nötig (Morph-Alias: inbox_item).
-        // FQCN (nicht der Alias): AuthzResolver::owns() macht `new $model` → braucht
-        // die Klasse; DimensionLinkService::resolveContextType() macht daraus intern
-        // wieder den Morph-Alias 'inbox_item'. So greift canWrite (inbox_items.user_id)
-        // und der Add-Picker erscheint.
-        $this->commsCtx = ($selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id']))
+        // Die FQCN wird über den Morph-Alias 'inbox_item' aufgelöst (vom inbox-Modul
+        // registriert) — home referenziert die Inbox-Klasse nicht mehr direkt.
+        // AuthzResolver::owns() macht `new $model` (braucht die Klasse); fehlt das
+        // inbox-Modul → kein Morph-Eintrag → kein Pin (graceful).
+        $inboxModel = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel('inbox_item');
+        $this->commsCtx = ($inboxModel && $selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id']))
             ? [
-                'model'   => \Platform\Inbox\Models\InboxItem::class,
+                'model'   => $inboxModel,
                 'modelId' => (int) $selected['inbox_id'],
                 'subject' => (string) ($selected['subject'] ?? $selected['sender'] ?? 'Eingang'),
                 'source'  => 'home.inbox',
