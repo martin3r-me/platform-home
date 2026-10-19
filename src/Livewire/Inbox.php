@@ -352,203 +352,12 @@ class Inbox extends Component
     }
 
     /**
-     * Echte Meeting-Items über den Inbox-Kontrakt (Kanal für Kanal echt).
-     * Fehlt Inbox/Team/Daten → leer, dann bleibt der Dummy-Meeting.
+     * Echter Eingang-Stream über die EINE Core-InboxQuery (listStreamForUser):
+     * Meeting/Mail/Call/Task/Ticket via SourceList-Adapter, Aufnahme Core-nativ.
+     * home kennt die 5 Inbox*QueryContracts nicht mehr — nur noch Core. Die
+     * kanal-spezifische Präsentation (Icon/Label/Felder) macht mapRow().
      */
-    protected function realMeetings(): array
-    {
-        $contract = \Platform\Inbox\Contracts\InboxMeetingQueryContract::class;
-        if (!interface_exists($contract)) {
-            return [];
-        }
-
-        $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
-            return [];
-        }
-
-        try {
-            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 20);
-        } catch (\Throwable $e) {
-            return [];
-        }
-
-        return array_map(fn ($m) => [
-            'id'            => 10000 + (int) $m['id'],   // eigener ID-Raum, kollidiert nicht mit Dummies
-            'inbox_id'      => (int) $m['id'],
-            'real'          => true,
-            'channel'       => 'meeting',
-            'channel_label' => 'Meeting',
-            'icon'          => 'heroicon-o-calendar-days',
-            'sender'        => $m['subject'] ?? 'Meeting',
-            'subject'       => $m['when'] ?? '',
-            'preview'       => trim(($m['participants_count'] ?? 0) . ' Teilnehmer'),
-            'time'          => $m['time_short'] ?? '',
-            'unread'        => (bool) ($m['unread'] ?? true),
-            'status'        => 'new',
-            'section'       => $m['section'] ?? null,
-            'is_series'     => (bool) ($m['is_series'] ?? false),
-            'series_count'  => (int) ($m['series_count'] ?? 1),
-        ], $rows);
-    }
-
-    /**
-     * Echte Mail-Items über den Inbox-Kontrakt (quellfrei, neueste zuerst).
-     * Fehlt Inbox/Team/Daten → leer, dann bleiben die Dummy-Mails.
-     */
-    protected function realMails(): array
-    {
-        $contract = \Platform\Inbox\Contracts\InboxMailQueryContract::class;
-        if (!interface_exists($contract)) {
-            return [];
-        }
-
-        $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
-            return [];
-        }
-
-        try {
-            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
-        } catch (\Throwable $e) {
-            return [];
-        }
-
-        return array_map(fn ($m) => [
-            'id'            => 20000 + (int) $m['id'],   // eigener ID-Raum (Mails), kollidiert nicht
-            'inbox_id'      => (int) $m['id'],
-            'real'          => true,
-            'channel'       => 'mail',
-            'channel_label' => 'E-Mail',
-            'icon'          => 'heroicon-o-envelope',
-            'sender'        => $m['sender'] ?? 'Unbekannt',
-            'subject'       => $m['subject'] ?? '',
-            'preview'       => $m['preview'] ?? '',
-            'time'          => $m['time'] ?? '',
-            'unread'        => (bool) ($m['unread'] ?? true),
-            'status'        => 'new',
-            'is_thread'     => ($m['thread_count'] ?? 1) > 1,
-            'thread_count'  => (int) ($m['thread_count'] ?? 1),
-        ], $rows);
-    }
-
-    /**
-     * Echte Anruf-Items über den Inbox-Kontrakt (quellfrei, neueste zuerst).
-     */
-    protected function realCalls(): array
-    {
-        $contract = \Platform\Inbox\Contracts\InboxCallQueryContract::class;
-        if (!interface_exists($contract)) {
-            return [];
-        }
-
-        $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
-            return [];
-        }
-
-        try {
-            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
-        } catch (\Throwable $e) {
-            return [];
-        }
-
-        return array_map(fn ($m) => [
-            'id'            => 30000 + (int) $m['id'],   // eigener ID-Raum (Anrufe)
-            'inbox_id'      => (int) $m['id'],
-            'real'          => true,
-            'channel'       => 'call',
-            'channel_label' => 'Anruf',
-            'icon'          => 'heroicon-o-phone',
-            'sender'        => $m['sender'] ?? 'Unbekannt',
-            'subject'       => $m['subject'] ?? '',
-            'preview'       => $m['preview'] ?? '',
-            'time'          => $m['time'] ?? '',
-            'unread'        => (bool) ($m['unread'] ?? true),
-            'status'        => 'new',
-        ], $rows);
-    }
-
-    /**
-     * Echte Aufgaben-Items (mir zugewiesen) über den Inbox-Kontrakt.
-     */
-    protected function realTasks(): array
-    {
-        $contract = \Platform\Inbox\Contracts\InboxTaskQueryContract::class;
-        if (!interface_exists($contract)) {
-            return [];
-        }
-
-        $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
-            return [];
-        }
-
-        try {
-            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
-        } catch (\Throwable $e) {
-            return [];
-        }
-
-        return array_map(fn ($m) => [
-            'id'            => 40000 + (int) $m['id'],   // eigener ID-Raum (Aufgaben)
-            'inbox_id'      => (int) $m['id'],
-            'real'          => true,
-            'channel'       => 'task',
-            'channel_label' => 'Aufgabe',
-            'icon'          => 'heroicon-o-clipboard-document-check',
-            'sender'        => $m['sender'] ?? 'Zugewiesen',
-            'subject'       => $m['subject'] ?? '',
-            'preview'       => $m['preview'] ?? '',
-            'time'          => $m['time'] ?? '',
-            'unread'        => (bool) ($m['unread'] ?? true),
-            'status'        => 'new',
-        ], $rows);
-    }
-
-    /** Echte Ticket-Items (mir zugewiesen) über den Inbox-Kontrakt. */
-    protected function realTickets(): array
-    {
-        $contract = \Platform\Inbox\Contracts\InboxTicketQueryContract::class;
-        if (!interface_exists($contract)) {
-            return [];
-        }
-
-        $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
-            return [];
-        }
-
-        try {
-            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 25);
-        } catch (\Throwable $e) {
-            return [];
-        }
-
-        return array_map(fn ($m) => [
-            'id'            => 50000 + (int) $m['id'],   // eigener ID-Raum (Tickets)
-            'inbox_id'      => (int) $m['id'],
-            'real'          => true,
-            'channel'       => 'ticket',
-            'channel_label' => 'Ticket',
-            'icon'          => 'heroicon-o-lifebuoy',
-            'sender'        => $m['sender'] ?? 'Zugewiesen',
-            'subject'       => $m['subject'] ?? '',
-            'preview'       => $m['preview'] ?? '',
-            'time'          => $m['time'] ?? '',
-            'unread'        => (bool) ($m['unread'] ?? true),
-            'status'        => 'new',
-        ], $rows);
-    }
-
-    /**
-     * Echte Aufnahme-Items über die quellen-agnostische Core-InboxQuery.
-     * Aufnahmen (Plaud, Roh-Audio, künftige Anbieter) laufen über whisper in den
-     * Eingang und liegen als inbox_items (channel='recording') — anders als die
-     * 5 Inbox*QueryContracts, die aus den Quell-Modulen lesen. Schrittweise sollen
-     * alle Kanäle auf diese Core-Query wandern.
-     */
-    protected function realRecordings(): array
+    protected function realStream(): array
     {
         $contract = \Platform\Core\Inbox\Contracts\InboxQuery::class;
         if (!interface_exists($contract)) {
@@ -561,25 +370,130 @@ class Inbox extends Component
         }
 
         try {
-            $rows = app($contract)->listForUser($user->id, $user->currentTeam->id, 'recording', null, 25);
+            $rows = app($contract)->listStreamForUser($user->id, $user->currentTeam->id, 25);
         } catch (\Throwable $e) {
             return [];
         }
 
-        return array_map(fn ($m) => [
-            'id'            => 60000 + (int) $m['id'],   // eigener ID-Raum (Aufnahmen)
-            'inbox_id'      => (int) $m['id'],
-            'real'          => true,
-            'channel'       => 'recording',
-            'channel_label' => 'Aufnahme',
-            'icon'          => 'heroicon-o-microphone',
-            'sender'        => $m['sender_label'] ?? 'Aufnahme',
-            'subject'       => $m['subject'] ?? '',
-            'preview'       => $m['preview'] ?? '',
-            'time'          => $this->recTime($m['received_at'] ?? null),
-            'unread'        => true,
-            'status'        => 'new',
-        ], $rows);
+        $mapped = [];
+        foreach ($rows as $r) {
+            $item = $this->mapRow(is_array($r) ? $r : []);
+            if ($item !== null) {
+                $mapped[] = $item;
+            }
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * Eine Core-Stream-Zeile → home-Eingang-Item (reine Präsentation). Je Kanal
+     * eigener ID-Raum (Offset), Icon und Label; die Felder kommen aus der kanal-
+     * spezifischen Listen-Form des jeweiligen SourceList-Providers.
+     *
+     * @param  array<string,mixed>  $m
+     * @return array<string,mixed>|null
+     */
+    protected function mapRow(array $m): ?array
+    {
+        $channel = $m['channel'] ?? null;
+        $inboxId = (int) ($m['id'] ?? 0);
+        if ($inboxId <= 0 || !$channel) {
+            return null;
+        }
+
+        return match ($channel) {
+            'meeting' => [
+                'id'            => 10000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'meeting',
+                'channel_label' => 'Meeting',
+                'icon'          => 'heroicon-o-calendar-days',
+                'sender'        => $m['subject'] ?? 'Meeting',
+                'subject'       => $m['when'] ?? '',
+                'preview'       => trim(($m['participants_count'] ?? 0) . ' Teilnehmer'),
+                'time'          => $m['time_short'] ?? '',
+                'unread'        => (bool) ($m['unread'] ?? true),
+                'status'        => 'new',
+                'section'       => $m['section'] ?? null,
+                'is_series'     => (bool) ($m['is_series'] ?? false),
+                'series_count'  => (int) ($m['series_count'] ?? 1),
+            ],
+            'mail' => [
+                'id'            => 20000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'mail',
+                'channel_label' => 'E-Mail',
+                'icon'          => 'heroicon-o-envelope',
+                'sender'        => $m['sender'] ?? 'Unbekannt',
+                'subject'       => $m['subject'] ?? '',
+                'preview'       => $m['preview'] ?? '',
+                'time'          => $m['time'] ?? '',
+                'unread'        => (bool) ($m['unread'] ?? true),
+                'status'        => 'new',
+                'is_thread'     => ($m['thread_count'] ?? 1) > 1,
+                'thread_count'  => (int) ($m['thread_count'] ?? 1),
+            ],
+            'call' => [
+                'id'            => 30000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'call',
+                'channel_label' => 'Anruf',
+                'icon'          => 'heroicon-o-phone',
+                'sender'        => $m['sender'] ?? 'Unbekannt',
+                'subject'       => $m['subject'] ?? '',
+                'preview'       => $m['preview'] ?? '',
+                'time'          => $m['time'] ?? '',
+                'unread'        => (bool) ($m['unread'] ?? true),
+                'status'        => 'new',
+            ],
+            'task' => [
+                'id'            => 40000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'task',
+                'channel_label' => 'Aufgabe',
+                'icon'          => 'heroicon-o-clipboard-document-check',
+                'sender'        => $m['sender'] ?? 'Zugewiesen',
+                'subject'       => $m['subject'] ?? '',
+                'preview'       => $m['preview'] ?? '',
+                'time'          => $m['time'] ?? '',
+                'unread'        => (bool) ($m['unread'] ?? true),
+                'status'        => 'new',
+            ],
+            'ticket' => [
+                'id'            => 50000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'ticket',
+                'channel_label' => 'Ticket',
+                'icon'          => 'heroicon-o-lifebuoy',
+                'sender'        => $m['sender'] ?? 'Zugewiesen',
+                'subject'       => $m['subject'] ?? '',
+                'preview'       => $m['preview'] ?? '',
+                'time'          => $m['time'] ?? '',
+                'unread'        => (bool) ($m['unread'] ?? true),
+                'status'        => 'new',
+            ],
+            'recording' => [
+                'id'            => 60000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'recording',
+                'channel_label' => 'Aufnahme',
+                'icon'          => 'heroicon-o-microphone',
+                'sender'        => $m['sender_label'] ?? 'Aufnahme',
+                'subject'       => $m['subject'] ?? '',
+                'preview'       => $m['preview'] ?? '',
+                'time'          => $this->recTime($m['received_at'] ?? null),
+                'unread'        => true,
+                'status'        => 'new',
+            ],
+            default => null,
+        };
     }
 
     /** ISO-Zeit → kurzes Label (heute: H:i, sonst Datum). */
@@ -601,24 +515,15 @@ class Inbox extends Component
     protected function mergedItems(): array
     {
         $all = $this->items();
-        $prepend = [];
+        $real = $this->realStream();
 
-        // Je Kanal: Dummies durch echte Items ersetzen (falls vorhanden).
-        foreach ([
-            'meeting' => $this->realMeetings(),
-            'mail'    => $this->realMails(),
-            'call'    => $this->realCalls(),
-            'task'    => $this->realTasks(),
-            'ticket'  => $this->realTickets(),
-            'recording' => $this->realRecordings(),
-        ] as $channel => $real) {
-            if (!empty($real)) {
-                $all = array_values(array_filter($all, fn ($it) => ($it['channel'] ?? '') !== $channel));
-                $prepend = array_merge($prepend, $real);
-            }
+        // Dummies der Kanäle, für die es echte Items gibt, raus; echte davor.
+        $realChannels = array_unique(array_filter(array_map(fn ($it) => $it['channel'] ?? null, $real)));
+        if ($realChannels) {
+            $all = array_values(array_filter($all, fn ($it) => !in_array($it['channel'] ?? '', $realChannels, true)));
         }
 
-        return $this->consolidateUnits(array_merge($prepend, $all));
+        return $this->consolidateUnits(array_merge($real, $all));
     }
 
     /**
