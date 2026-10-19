@@ -734,9 +734,13 @@ class Inbox extends Component
         // Echtes Item ans Terminal pinnen → die organization-„Verknüpfungen"-App
         // (DimensionLinks) erscheint und übernimmt das Hängen an Org-Knoten.
         // Kein eigener Attach-Flow in home mehr nötig (Morph-Alias: inbox_item).
+        // FQCN (nicht der Alias): AuthzResolver::owns() macht `new $model` → braucht
+        // die Klasse; DimensionLinkService::resolveContextType() macht daraus intern
+        // wieder den Morph-Alias 'inbox_item'. So greift canWrite (inbox_items.user_id)
+        // und der Add-Picker erscheint.
         $this->commsCtx = ($selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id']))
             ? [
-                'model'   => 'inbox_item',
+                'model'   => \Platform\Inbox\Models\InboxItem::class,
                 'modelId' => (int) $selected['inbox_id'],
                 'subject' => (string) ($selected['subject'] ?? $selected['sender'] ?? 'Eingang'),
                 'source'  => 'home.inbox',
