@@ -12,6 +12,7 @@ use Platform\Home\Livewire\Dashboard;
 use Platform\Home\Livewire\Inbox;
 use Platform\Home\Livewire\MeinTag;
 use Platform\Home\Livewire\Agenda;
+use Platform\Home\Livewire\AgendaBoard;
 use Platform\Home\Livewire\Checkin;
 use Platform\Home\Livewire\Kalender;
 use Platform\Home\Livewire\Zeiten;
@@ -27,6 +28,7 @@ Route::get('/',        Dashboard::class)->name('home.dashboard');
 Route::get('/eingang', Inbox::class)->name('home.inbox');
 Route::get('/mein-tag', MeinTag::class)->name('home.mein-tag');
 Route::get('/agenda',   Agenda::class)->name('home.agenda');
+Route::get('/agenda/{agenda}', AgendaBoard::class)->whereNumber('agenda')->name('home.agenda.show');
 Route::get('/checkin',  Checkin::class)->name('home.checkin');
 
 // Meins

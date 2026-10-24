@@ -71,6 +71,42 @@ class HomeServiceProvider extends ServiceProvider
 
         // SCHRITT 6: Livewire-Komponenten automatisch registrieren
         $this->registerLivewireComponents();
+
+        // SCHRITT 7: Agenda — Reiter im Kontext-Panel + MCP-Tools (home.agendas.*, …)
+        $this->registerAgenda();
+    }
+
+    /**
+     * Agenda-Reiter ins Core-Kontext-Panel einhängen (Registry, kein Core→home-Pfeil)
+     * und die Agenda-Tools registrieren. Die Tabellen heißen weiter terminal_agenda*.
+     */
+    protected function registerAgenda(): void
+    {
+        try {
+            \Platform\Core\Terminal\TerminalAppRegistry::register(new \Platform\Home\Terminal\AgendaPanelApp());
+        } catch (\Throwable $e) {
+            // Registry (noch) nicht verfügbar — überspringen.
+        }
+
+        try {
+            $registry = resolve(\Platform\Core\Tools\ToolRegistry::class);
+            foreach ([
+                \Platform\Home\Tools\ListAgendasTool::class,
+                \Platform\Home\Tools\CreateAgendaTool::class,
+                \Platform\Home\Tools\DeleteAgendaTool::class,
+                \Platform\Home\Tools\ListAgendaItemsTool::class,
+                \Platform\Home\Tools\ManageAgendaItemsTool::class,
+                \Platform\Home\Tools\UpdateAgendaItemTool::class,
+                \Platform\Home\Tools\ManageAgendaSlotsTool::class,
+            ] as $class) {
+                $tool = $this->app->make($class);
+                if (! $registry->has($tool->getName())) {
+                    $registry->register($tool);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Registry (noch) nicht verfügbar (z. B. während Migrationen) — überspringen.
+        }
     }
 
     /**
