@@ -13,10 +13,6 @@
             @svg('heroicon-o-inbox', 'w-4 h-4 shrink-0')
             <span class="text-sm">Eingang</span>
         </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('home.mein-tag')" :active="request()->routeIs('home.mein-tag')">
-            @svg('heroicon-o-sun', 'w-4 h-4 shrink-0')
-            <span class="text-sm">Mein Tag</span>
-        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('home.agenda')" :active="request()->routeIs('home.agenda*')">
             @svg('heroicon-o-queue-list', 'w-4 h-4 shrink-0')
             <span class="text-sm">Agenda</span>
