@@ -161,14 +161,7 @@
                         @endforelse
                     </x-nx-kanban-column>
                 @else
-                    <button type="button" wire:click="$set('showDone', true)" wire:key="agenda-col-done-collapsed"
-                            class="sticky right-0 z-10 flex h-full flex-shrink-0 flex-col items-center justify-between border-l border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2 py-4 transition-colors hover:bg-[color:var(--nx-hover)]"
-                            style="width: 2.75rem; min-width: 2.75rem;"
-                            title="Erledigte anzeigen ({{ count($done['items']) }})">
-                        @svg('heroicon-o-chevron-double-left', 'w-4 h-4 text-[color:var(--nx-success)] mt-1')
-                        <span class="my-2 flex-1 text-[10px] font-bold uppercase tracking-wider text-[color:var(--nx-success)]" style="writing-mode: vertical-rl; transform: rotate(180deg);">Erledigt</span>
-                        <span class="inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full bg-[rgba(47,158,68,0.16)] px-1 text-[10px] font-semibold tabular-nums text-[color:var(--nx-success)]">{{ count($done['items']) }}</span>
-                    </button>
+                    <x-nx-kanban-collapsed :title="$done['name']" :count="count($done['items'])" wire:click="$set('showDone', true)" wire:key="agenda-col-done-collapsed" />
                 @endif
             @endif
         </x-nx-kanban-container>
