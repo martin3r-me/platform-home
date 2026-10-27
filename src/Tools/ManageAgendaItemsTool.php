@@ -79,7 +79,7 @@ class ManageAgendaItemsTool implements ToolContract
                 'agendable_type' => [
                     'type' => 'string',
                     'enum' => array_keys(self::AGENDABLE_TYPES),
-                    'description' => 'Entity-Typ zum Verlinken (erforderlich bei action=attach). Z.B. "planner.task", "canvas", "helpdesk.ticket".',
+                    'description' => 'Entity-Typ zum Verlinken (erforderlich bei action=attach). Z.B. "planner.task", "planner.canvas", "helpdesk.ticket".',
                 ],
                 'agendable_id' => [
                     'type' => 'integer',
