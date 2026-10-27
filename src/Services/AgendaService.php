@@ -22,7 +22,7 @@ class AgendaService
     private const TYPE_LABELS = [
         'Platform\\Planner\\Models\\PlannerTask' => 'Aufgabe',
         'Platform\\Planner\\Models\\PlannerProject' => 'Projekt',
-        'Platform\\Canvas\\Models\\Canvas' => 'Canvas',
+        'Platform\\Planner\\Models\\PlannerProjectCanvas' => 'Canvas',
         'Platform\\Helpdesk\\Models\\HelpdeskBoard' => 'Board',
         'Platform\\Helpdesk\\Models\\HelpdeskTicket' => 'Ticket',
         'Platform\\Okr\\Models\\Objective' => 'Objective',

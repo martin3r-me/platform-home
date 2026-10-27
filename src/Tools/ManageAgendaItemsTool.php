@@ -16,7 +16,6 @@ class ManageAgendaItemsTool implements ToolContract
         'planner.task' => \Platform\Planner\Models\PlannerTask::class,
         'planner.project' => \Platform\Planner\Models\PlannerProject::class,
         'planner.canvas' => \Platform\Planner\Models\PlannerProjectCanvas::class,
-        'canvas' => \Platform\Canvas\Models\Canvas::class, // @deprecated Alt-Modul platforms-canvas
         'helpdesk.board' => \Platform\Helpdesk\Models\HelpdeskBoard::class,
         'helpdesk.ticket' => \Platform\Helpdesk\Models\HelpdeskTicket::class,
         'okr.objective' => \Platform\Okr\Models\Objective::class,
