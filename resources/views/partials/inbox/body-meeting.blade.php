@@ -1,37 +1,18 @@
 {{-- Meeting: Termin, Teilnehmer, Agenda --}}
 <div class="space-y-4">
-    {{-- Roter Faden: Kalender-Termin → vollwertiges Meeting → Zeiten-Tracking --}}
+    {{-- Roter Faden: Termin → an Org-Knoten hängen → Zeiten-Tracking (automatisch) --}}
     @if($item['real'] ?? false)
         @php $isSeries = $item['is_series'] ?? false; $seriesN = $item['series_count'] ?? 1; @endphp
-        @if(empty($item['meeting_id']))
-            <x-nx-callout variant="info" icon="heroicon-o-calendar-days" title="{{ $isSeries ? 'Serie · noch kein Meeting' : 'Noch kein echtes Meeting' }}">
-                @if($isSeries)
-                    Termin einer Serie{{ $seriesN > 1 ? ' (' . $seriesN . ' offene Vorkommen)' : '' }}. Klink die <strong>ganze Serie</strong> als ein Meeting ein —
-                    alle Vorkommen docken an. Sobald es an einem Org-Knoten hängt, werden die Zeiten automatisch getrackt.
-                @else
-                    Mach daraus ein vollwertiges Meeting — mit pflegbarer Agenda. Sobald es an einem
-                    Org-Knoten hängt, werden die Zeiten automatisch getrackt.
-                @endif
-                <x-slot name="action">
-                    <x-nx-button variant="primary" size="sm" wire:click="promoteMeeting" wire:loading.attr="disabled">
-                        @svg('heroicon-o-sparkles', 'h-4 w-4')
-                        {{ $isSeries ? 'Serie einklinken' : 'Zu Meeting machen' }}
-                    </x-nx-button>
-                </x-slot>
-            </x-nx-callout>
-        @else
-            <x-nx-callout variant="success" icon="heroicon-o-check-circle" title="{{ $isSeries ? 'Serie eingeklinkt' : 'Echtes Meeting' }}">
-                Agenda &amp; Notizen sind im meetings-Workspace pflegbar. An einem Org-Knoten werden die Zeiten getrackt.
-                @if(\Illuminate\Support\Facades\Route::has('meetings.show'))
-                    <x-slot name="action">
-                        <x-nx-button variant="secondary" size="sm" :href="route('meetings.show', $item['meeting_id'])">
-                            @svg('heroicon-o-arrow-top-right-on-square', 'h-4 w-4')
-                            In Meetings öffnen
-                        </x-nx-button>
-                    </x-slot>
-                @endif
-            </x-nx-callout>
-        @endif
+        <x-nx-callout variant="info" icon="heroicon-o-link" title="{{ $isSeries ? 'Serientermin an einen Knoten hängen' : 'Termin an einen Knoten hängen' }}">
+            @if($isSeries)
+                Häng die <strong>Serie</strong>{{ $seriesN > 1 ? ' (' . $seriesN . ' Vorkommen)' : '' }} im Panel
+                <strong>Verknüpfungen</strong> an den passenden Org-Knoten — alle Vorkommen und künftige Termine
+                docken automatisch an. Sobald er hängt, wird die Zeit pro Teilnehmer automatisch getrackt.
+            @else
+                Häng den Termin im Panel <strong>Verknüpfungen</strong> an den passenden Org-Knoten — danach wird
+                die Zeit pro Teilnehmer automatisch getrackt.
+            @endif
+        </x-nx-callout>
     @endif
 
     <x-nx-property-row icon="heroicon-o-clock" label="Wann">{{ $item['when'] ?? '—' }}</x-nx-property-row>

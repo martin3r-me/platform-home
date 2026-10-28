@@ -49,34 +49,9 @@ class Inbox extends Component
     }
 
     /**
-     * Roter Faden: aus einem Eingang-Meeting ein VOLLWERTIGES Meeting machen.
-     * Loose/guarded — das meetings-Modul muss nicht da sein; fehlt es, passiert nichts.
-     * Danach docken Serien-Vorkommen über inbox_items.meeting_id an, und sobald das
-     * Meeting an einem Org-Knoten hängt, werden die Zeiten automatisch getrackt.
-     */
-    public function promoteMeeting(): void
-    {
-        if (!$this->selectedId || $this->selectedId < 10000) {
-            return; // nur echte Meeting-Items (eigener ID-Raum ab 10000)
-        }
-
-        $svc = \Platform\Meetings\Services\MeetingPromotionService::class;
-        if (!class_exists($svc)) {
-            return; // meetings-Modul nicht installiert → keine harte Kopplung
-        }
-
-        try {
-            app($svc)->promoteInboxItem($this->selectedId - 10000);
-        } catch (\Throwable $e) {
-            // bleibt beim Kalender-Item, kein Fehler nach außen
-        }
-        // Re-render: detailForItem liefert nun meeting_id → UI kippt auf "Echtes Meeting".
-    }
-
-    /**
      * Erledigt: triagiert → raus aus dem Eingang. Setzt den Inbox-Status auf Done;
-     * listForUser zieht nur 'new', also verschwindet das Item. Meeting, Knoten-Link
-     * und Zeit-Buchung bleiben bestehen (MaterializeMeetingTime filtert nicht nach
+     * listForUser zieht nur 'new', also verschwindet das Item. Knoten-Link und
+     * Zeit-Buchung bleiben bestehen (MaterializeMeetingTime filtert nicht nach
      * Inbox-Status).
      */
     public function markDone(): void
