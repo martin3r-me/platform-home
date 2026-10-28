@@ -144,7 +144,12 @@ class HomeServiceProvider extends ServiceProvider
                 continue;
             }
 
-            $aliasPath = str_replace(['\\', '/'], '.', Str::kebab(str_replace('.php', '', $relativePath)));
+            // Jedes Pfad-Segment EINZELN kebaben, dann mit Punkt verbinden.
+            // (Str::kebab auf dem ganzen Pfad würde bei verschachtelten Komponenten
+            //  — z. B. Panel/Agenda — einen Streu-Bindestrich erzeugen: "panel.-agenda"
+            //  statt "panel.agenda" → Alias passt nicht zu AgendaPanelApp::id().)
+            $segments = preg_split('#[\\\\/]+#', str_replace('.php', '', $relativePath));
+            $aliasPath = implode('.', array_map(fn ($s) => Str::kebab($s), $segments));
             $alias = $prefix . '.' . $aliasPath;
 
             Livewire::component($alias, $class);
