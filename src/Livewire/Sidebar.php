@@ -80,10 +80,14 @@ class Sidebar extends Component
 
         return collect($registered)
             ->filter(function ($m) use ($modelsByKey, $user, $baseTeam) {
-                if (($m['key'] ?? null) === 'home') {
+                $key = $m['key'] ?? null;
+                if ($key === 'home') {
                     return false; // Home nicht auf sich selbst verlinken
                 }
-                $model = $modelsByKey->get($m['key'] ?? null);
+                if ($key === 'inbox') {
+                    return false; // inbox ist headless (nur API/Engine) — der Eingang lebt in home
+                }
+                $model = $modelsByKey->get($key);
                 return $model && $model->hasAccess($user, $baseTeam);
             })
             ->sortBy(fn ($m) => $m['navigation']['order'] ?? 999)
