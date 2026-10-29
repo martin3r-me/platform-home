@@ -3,12 +3,13 @@
         <x-ui-page-navbar title="Zuhause" icon="heroicon-o-home" />
     </x-slot>
 
-    {{-- ZUHAUSE: das warme persönliche Cockpit. Begrüßung + Check-in, dann die
-         präsente (aber begrenzte) Eingang-Box neben den Kern-Widgets (Zeit, Aufgaben),
-         darunter der Katalog der übrigen Widgets — je ein Person-Kontrakt. Der volle
-         Posteingang lebt auf /eingang; hier ist er ein Fenster, kein Fass. --}}
+    {{-- ZUHAUSE: das warme persönliche Cockpit über die GANZE Breite. Begrüßung +
+         Check-in, dann ein Masonry-artiges Raster (1/2/3/4 Spalten je nach Display,
+         grid-auto-flow:dense packt die Karten). Die Eingang-Box ist ein breiteres
+         Tile (col-span-2), präsent aber begrenzt (nur offene Items, innen scrollbar);
+         der volle Posteingang lebt auf /eingang. Jedes Widget = ein Person-Kontrakt. --}}
     <div class="min-h-0 flex-1 overflow-y-auto">
-        <div class="mx-auto w-full max-w-6xl px-6 py-7">
+        <div class="w-full px-4 py-7 sm:px-6">
 
             {{-- Begrüßung + Check-in --}}
             <div class="mb-6 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
@@ -55,11 +56,11 @@
                 </div>
             </div>
 
-            {{-- Reihe 1: Eingang-Box (präsent, begrenzt) + Kern-Widgets --}}
-            <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+            {{-- Masonry-Raster: volle Breite, 1/2/3/4 Spalten je nach Display --}}
+            <div class="grid grid-cols-1 items-start gap-4 [grid-auto-flow:dense] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 
-                {{-- Eingang: innen scrollbar, nur offene Items --}}
-                <section class="flex h-[500px] flex-col overflow-hidden rounded-[14px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] shadow-sm">
+                {{-- Eingang: breiteres Tile (2 Spalten), innen scrollbar, nur offene Items --}}
+                <section class="flex h-[500px] flex-col overflow-hidden rounded-[14px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] shadow-sm sm:col-span-2">
                     <header class="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--nx-line)] px-4 py-3">
                         <h2 class="flex items-center gap-2 text-sm font-semibold text-[color:var(--nx-text)]">
                             @svg('heroicon-o-inbox', 'h-4 w-4 text-[color:var(--nx-muted)]')
@@ -88,22 +89,16 @@
                     </div>
                 </section>
 
-                {{-- Kern-Widgets: Zeit + Aufgaben --}}
-                <div class="flex flex-col gap-4">
-                    @include('home::partials.widgets.stamp')
-                    @include('home::partials.widgets.tasks')
-                </div>
+                {{-- Kern-Widgets --}}
+                @include('home::partials.widgets.stamp')
+                @include('home::partials.widgets.tasks')
+
+                {{-- Katalog der übrigen Widgets (je Kontrakt ein Baustein; später abonnierbar) --}}
+                @foreach($widgets as $w)
+                    @include('home::partials.widgets.' . $w)
+                @endforeach
+
             </div>
-
-            {{-- Reihe 2: Widget-Katalog (je Kontrakt ein Baustein; später abonnierbar) --}}
-            @if(!empty($widgets))
-                <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    @foreach($widgets as $w)
-                        @include('home::partials.widgets.' . $w)
-                    @endforeach
-                </div>
-            @endif
-
         </div>
     </div>
 </x-ui-page>
