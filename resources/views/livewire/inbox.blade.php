@@ -3,12 +3,13 @@
         <x-ui-page-navbar title="Eingang" icon="heroicon-o-inbox" />
     </x-slot>
 
-    {{-- STROM: ein Fluss aus Kacheln. Oben die Filter, darunter die Items.
-         Die Kachel trägt nur Triage; ein Klick öffnet die eigene Item-View. --}}
+    {{-- STROM: ein durchlaufendes Postfach über die ganze Breite (Outlook-artig).
+         Oben die Filter, darunter die Zeilen. Jede Zeile trägt nur Triage; ein
+         Klick auf die Zeile öffnet die eigene Item-View (/eingang/{item}). --}}
     <div class="flex min-h-0 flex-1 flex-col">
-        {{-- Filterleiste: Kanal × Status, kompakt & ruhig --}}
+        {{-- Filterleiste: Kanal × Status, kompakt & ruhig, volle Breite --}}
         <div class="shrink-0 border-b border-[color:var(--nx-line)] bg-[color:var(--nx-surface)]">
-            <div class="mx-auto flex max-w-2xl flex-wrap items-center gap-1 px-4 py-2">
+            <div class="flex flex-wrap items-center gap-1 px-6 py-2">
                 @foreach($channels as $c)
                     <button type="button" wire:click="setChannel('{{ $c['key'] }}')" title="{{ $c['label'] }}"
                             class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors {{ $channel === $c['key'] ? 'bg-[color:var(--nx-active)] text-[color:var(--nx-text)]' : 'text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-hover)]' }}">
@@ -29,21 +30,22 @@
             </div>
         </div>
 
-        {{-- Der Strom --}}
+        {{-- Der Strom: eine durchlaufende, geteilte Liste über die ganze Breite --}}
         <div class="min-h-0 flex-1 overflow-y-auto">
-            <div class="mx-auto max-w-2xl space-y-3 px-4 py-5">
-                @php($prevSection = null)
+            @php($prevSection = null)
+            <div class="divide-y divide-[color:var(--nx-line)]">
                 @forelse($items as $it)
                     @if(!empty($it['section']) && $it['section'] !== $prevSection)
                         @php($prevSection = $it['section'])
-                        <div class="flex items-center gap-2 pt-2 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--nx-faint)] first:pt-0">
+                        <div class="sticky top-0 z-10 flex items-center gap-2 border-b border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-6 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--nx-faint)]">
                             {{ $it['section'] === 'upcoming' ? 'Anstehend' : 'Vergangen' }}
-                            <span class="h-px flex-1 bg-[color:var(--nx-line)]"></span>
                         </div>
                     @endif
                     @include('home::partials.inbox.card', ['it' => $it])
                 @empty
-                    <x-nx-empty icon="heroicon-o-check-circle">Nichts hier — sauber.</x-nx-empty>
+                    <div class="px-6 py-16">
+                        <x-nx-empty icon="heroicon-o-check-circle">Nichts hier — sauber.</x-nx-empty>
+                    </div>
                 @endforelse
             </div>
         </div>
