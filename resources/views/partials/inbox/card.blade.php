@@ -10,6 +10,7 @@
     $real   = (bool) ($it['real'] ?? false);
     $teaser = trim((string) ($it['summary'] ?? $it['preview'] ?? ''));
     $unread = !empty($it['unread']);
+    $padX   = ($dense ?? false) ? 'px-4' : 'px-6';
 
     $badges = collect();
     if (!empty($it['is_series'])) $badges->push(['heroicon-o-arrow-path', 'Serie' . (($it['series_count'] ?? 1) > 1 ? ' · ' . $it['series_count'] : '')]);
@@ -20,7 +21,7 @@
     }
 @endphp
 
-<article class="group relative flex items-center gap-3 px-6 py-3 transition-colors hover:bg-[color:var(--nx-hover)] {{ $real ? '' : 'opacity-70' }}">
+<article class="group relative flex items-center gap-3 {{ $padX }} py-3 transition-colors hover:bg-[color:var(--nx-hover)] {{ $real ? '' : 'opacity-70' }}">
 
     {{-- Unread-Akzent ganz links --}}
     @if($unread)

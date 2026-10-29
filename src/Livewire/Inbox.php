@@ -10,13 +10,17 @@ use Platform\Core\Livewire\Concerns\HasPageContext;
 use Platform\Home\Livewire\Concerns\ProvidesTodaySummary;
 
 /**
- * Cockpit – die persönliche Landefläche von HOME (nx-Stil). Eingang + „Heute"
- * zusammengeführt: oben ein schlanker Kopf (ProvidesTodaySummary: Begrüßung,
- * Streak, Check-in, Termine heute, Fokus/Frogs + Schnellaktionen), darunter der
- * vollbreite Triage-Strom über die ganze Breite — keine innere Sidebar. Das
- * frühere eigenständige Dashboard ist hierin aufgegangen; `/` und `/eingang`
- * rendern dieselbe Fläche. Reflektierende Tiefe (7-Tage-Zeiten, Ziele, Aufgaben)
- * bleibt auf ihren eigenen Seiten, nur als „Details →" verlinkt.
+ * HOME-Herzstück – eine Komponente, drei Modi (nx-Stil):
+ *   · DASHBOARD (`/` = home.dashboard, renderDashboard → livewire/cockpit): das
+ *     warme Zuhause. Begrüßung + Check-in, die präsente aber begrenzte Eingang-Box
+ *     (nur offene Items, innen scrollbar; der volle Strom lebt auf /eingang) neben
+ *     den Karten „zuletzt gestempelt" / „offene Aufgaben" / „Termine heute". Daten
+ *     via ProvidesTodaySummary (+ loadLastStamp) — alles über Person-Kontrakte.
+ *   · STROM (`/eingang` = home.inbox, renderStream): der volle Posteingang als
+ *     durchlaufende, vollbreite Zeilenliste mit Filtern. Zeile trägt nur Triage;
+ *     ein Klick öffnet die Item-View.
+ *   · ITEM-VIEW (`/eingang/{item}`, renderDetail → livewire/inbox-item): die eigene
+ *     fokussierte Seite eines Items. $itemId steuert; $view trennt dashboard/stream.
  *
  * STROM + EIGENE ITEM-VIEW (eine Route, zwei Modi — $itemId steuert):
  *   · STROM (/eingang): ein Fluss aus Kacheln. Die Kachel trägt NUR Triage
@@ -36,8 +40,15 @@ class Inbox extends Component
     use HasPageContext;
     use ProvidesTodaySummary;
 
-    /** Detail-Modus: gesetzt = die eigene Item-View (Route /eingang/{item}); null = Stream. */
+    /** Detail-Modus: gesetzt = die eigene Item-View (Route /eingang/{item}); null = Stream/Dashboard. */
     public ?int $itemId = null;
+
+    /**
+     * Ansicht ohne Item: 'dashboard' (Zuhause, `/` = home.dashboard) oder 'stream'
+     * (voller Posteingard, `/eingang` = home.inbox). In mount() aus dem Routennamen
+     * abgeleitet; persistiert über Livewire-Updates.
+     */
+    public string $view = 'stream';
 
     public string $channel = 'all';
     public string $status = 'all';
@@ -52,10 +63,19 @@ class Inbox extends Component
     {
         $this->itemId = $item ?: null;
 
-        // Cockpit-Landing (Stream-Modus): den Tages-Glance für den Kopf laden. Die
-        // Item-View braucht ihn nicht — dort spart das die Kalender-/Task-Queries.
-        if ($this->itemId === null) {
-            $this->loadTodaySummary();
+        // Item-View braucht weder Dashboard-Daten noch Tages-Glance.
+        if ($this->itemId !== null) {
+            return;
+        }
+
+        // `/` (home.dashboard) = Zuhause-Dashboard; `/eingang` (home.inbox) = voller Strom.
+        $this->view = request()->route()?->getName() === 'home.inbox' ? 'stream' : 'dashboard';
+
+        $this->loadTodaySummary();
+
+        // „Zuletzt gestempelt" nur fürs Dashboard (eine zusätzliche Zeit-Query).
+        if ($this->view === 'dashboard') {
+            $this->loadLastStamp();
         }
     }
 
@@ -580,7 +600,31 @@ class Inbox extends Component
 
     public function render()
     {
-        return $this->itemId !== null ? $this->renderDetail() : $this->renderStream();
+        if ($this->itemId !== null) {
+            return $this->renderDetail();
+        }
+
+        return $this->view === 'dashboard' ? $this->renderDashboard() : $this->renderStream();
+    }
+
+    /**
+     * Zuhause-Dashboard (`/`): warmes Cockpit mit der Eingang-Box (präsent, aber
+     * begrenzt), zuletzt gestempelt, offenen Aufgaben, Terminen heute. Die Box zeigt
+     * nur OFFENE Items (ein gepflegter Eingang ist nicht voll); der volle Posteingang
+     * lebt auf `/eingang`. Triage läuft über dieselben Methoden wie im Strom.
+     */
+    protected function renderDashboard()
+    {
+        $all = $this->mergedItems();
+        $open = array_values(array_filter($all, fn ($it) => ($it['status'] ?? '') !== 'done'));
+
+        $this->itemSubject = null;
+
+        return view('home::livewire.cockpit', [
+            'items'         => $open,
+            'eingangOpen'   => count($open),
+            'eingangUnread' => count(array_filter($open, fn ($it) => !empty($it['unread']))),
+        ])->layout('platform::layouts.app');
     }
 
     /** Stream: der Kachel-Fluss mit Filtern. Pinnt keinen Seitenkontext. */
