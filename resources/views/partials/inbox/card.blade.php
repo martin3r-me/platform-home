@@ -68,24 +68,30 @@
         @endif
     </div>
 
-    {{-- Triage rechts: immer erreichbar, echte inbox_id --}}
+    {{-- Triage rechts: klar als Aktionen erkennbar, immer erreichbar, echte inbox_id.
+         Erledigt = Hauptaktion (beschriftet, grüner Hover „abgehakt → raus aus dem
+         Eingang"); Wiedervorlage = Uhr mit Preset-Menü. --}}
     @if($real)
-        <div class="relative z-10 flex shrink-0 items-center gap-1">
-            <button type="button" wire:click="markDone({{ $it['inbox_id'] }})" wire:loading.attr="disabled" title="Erledigt"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-success,var(--nx-text))]">
-                @svg('heroicon-o-check', 'h-4 w-4')
+        <div class="relative z-10 flex shrink-0 items-center gap-1.5">
+            <button type="button" wire:click="markDone({{ $it['inbox_id'] }})" wire:loading.attr="disabled"
+                    title="Erledigt – raus aus dem Eingang"
+                    class="inline-flex h-7 items-center gap-1 rounded-md border border-[color:var(--nx-line)] px-2 text-[11px] font-medium text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-success)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-success)]">
+                @svg('heroicon-o-check', 'h-3.5 w-3.5 shrink-0')
+                <span class="whitespace-nowrap">Erledigt</span>
             </button>
 
             <div x-data="{ open: false }" class="relative">
-                <button type="button" @click="open = !open" title="Wiedervorlage"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-text)]">
-                    @svg('heroicon-o-clock', 'h-4 w-4')
+                <button type="button" @click="open = !open" title="Wiedervorlage – später erneut vorlegen"
+                        class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[color:var(--nx-line)] text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-accent)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-text)]">
+                    @svg('heroicon-o-clock', 'h-3.5 w-3.5')
                 </button>
                 <div x-show="open" x-cloak @click.outside="open = false" x-transition.opacity.duration.100ms
                      class="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-[10px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] py-1 shadow-sm">
+                    <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--nx-faint)]">Wiedervorlage</div>
                     @foreach(['In 1 Stunde' => 1, 'Heute Abend' => 8, 'Morgen früh' => 20, 'Nächste Woche' => 168] as $label => $h)
                         <button type="button" wire:click="snooze({{ $it['inbox_id'] }}, {{ $h }})" @click="open = false"
-                                class="block w-full px-3 py-1.5 text-left text-xs text-[color:var(--nx-text)] hover:bg-[color:var(--nx-hover)]">
+                                class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-[color:var(--nx-text)] hover:bg-[color:var(--nx-hover)]">
+                            @svg('heroicon-o-clock', 'h-3.5 w-3.5 shrink-0 text-[color:var(--nx-faint)]')
                             {{ $label }}
                         </button>
                     @endforeach
