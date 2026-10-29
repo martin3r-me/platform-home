@@ -1,8 +1,6 @@
 {{-- Aufgabe: dir zugewiesen — Beschreibung (+ Prototyp-Properties/DoD, falls da) --}}
 <div class="space-y-4">
-    @if(!empty($item['body']))
-        <div class="whitespace-pre-line text-sm leading-relaxed text-[color:var(--nx-text)]">{{ $item['body'] }}</div>
-    @endif
+    @include('home::partials.inbox.prose', ['text' => $item['body'] ?? ''])
 
     @if(!empty($item['props']))
         <div class="space-y-0.5">

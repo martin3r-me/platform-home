@@ -68,9 +68,7 @@
             @if(!empty($item['tldr']))
                 <div class="text-sm text-[color:var(--nx-muted)]">{{ $item['tldr'] }}</div>
             @endif
-            @if(!empty($item['summary']))
-                <p class="m-0 whitespace-pre-line text-sm leading-relaxed text-[color:var(--nx-text)]">{{ $item['summary'] }}</p>
-            @endif
+            @include('home::partials.inbox.prose', ['text' => $item['summary'] ?? ''])
         </div>
     @endif
 
@@ -117,20 +115,5 @@
     @endif
 
     {{-- Transcript --}}
-    @if(!empty($item['segments']))
-        <div>
-            <div class="mb-2 text-xs font-medium uppercase tracking-wide text-[color:var(--nx-faint)]">Transcript</div>
-            <div class="space-y-2">
-                @foreach($item['segments'] as $s)
-                    <div class="flex gap-3">
-                        <span class="shrink-0 text-xs tabular-nums text-[color:var(--nx-faint)]">{{ $s[0] }}</span>
-                        <div class="min-w-0">
-                            <span class="text-xs font-medium text-[color:var(--nx-muted)]">{{ $s[1] }}:</span>
-                            <span class="text-sm text-[color:var(--nx-text)]">{{ $s[2] }}</span>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
+    @include('home::partials.inbox.transcript', ['segments' => $item['segments'] ?? [], 'label' => 'Transcript'])
 </div>

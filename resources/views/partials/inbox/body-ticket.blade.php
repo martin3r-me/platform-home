@@ -1,8 +1,6 @@
 {{-- Ticket: dir zugewiesen — Beschreibung + Deep-Link ins Helpdesk --}}
 <div class="space-y-4">
-    @if(!empty($item['body']))
-        <div class="whitespace-pre-line text-sm leading-relaxed text-[color:var(--nx-text)]">{{ $item['body'] }}</div>
-    @endif
+    @include('home::partials.inbox.prose', ['text' => $item['body'] ?? ''])
 
     @if(!empty($item['ticket_id']) && \Illuminate\Support\Facades\Route::has('helpdesk.tickets.show'))
         <div class="flex flex-wrap gap-2">
