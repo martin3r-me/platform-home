@@ -2,8 +2,11 @@
 
 namespace Platform\Home\Livewire;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Platform\Core\Livewire\Concerns\HasPageContext;
 
 /**
  * Eingang – die persönliche Inbox als Herzstück von HOME (3-Pane, nx-Stil).
@@ -15,6 +18,8 @@ use Illuminate\Support\Facades\Auth;
  */
 class Inbox extends Component
 {
+    use HasPageContext;
+
     public ?int $selectedId = 1;
     public string $channel = 'all';
     public string $status = 'all';
@@ -22,8 +27,9 @@ class Inbox extends Component
     /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
     public string $notice = '';
 
-    /** Terminal-Kontext des gewählten echten Items (für dispatch('comms') in rendered()). */
-    protected ?array $commsCtx = null;
+    /** Gewähltes echtes Item (inbox_id + Betreff) als Seitenkontext — siehe pageContext(). */
+    protected ?int $selectedInboxId = null;
+    protected ?string $selectedSubject = null;
 
     public function mount(): void
     {
@@ -627,21 +633,17 @@ class Inbox extends Component
             $selected['facet_details'] = $facetDetails;
         }
 
-        // Echtes Item ans Terminal pinnen → die organization-„Verknüpfungen"-App
-        // (DimensionLinks) erscheint und übernimmt das Hängen an Org-Knoten.
-        // Die FQCN wird über den Morph-Alias 'inbox_item' aufgelöst (vom inbox-Modul
-        // registriert) — home referenziert die Inbox-Klasse nicht mehr direkt.
-        // AuthzResolver::owns() macht `new $model` (braucht die Klasse); fehlt das
-        // inbox-Modul → kein Morph-Eintrag → kein Pin (graceful).
-        $inboxModel = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel('inbox_item');
-        $this->commsCtx = ($inboxModel && $selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id']))
-            ? [
-                'model'   => $inboxModel,
-                'modelId' => (int) $selected['inbox_id'],
-                'subject' => (string) ($selected['subject'] ?? $selected['sender'] ?? 'Eingang'),
-                'source'  => 'home.inbox',
-            ]
-            : null;
+        // Gewähltes echtes Item als Seitenkontext merken → HasPageContext::rendered()
+        // dispatcht daraus `page-context` (neues Kontext-Panel, inkl. „Verknüpfungen"/
+        // DimensionLinks zum Hängen an einen Org-Knoten) plus die Alt-Events (comms …).
+        // Nur „reale" Items mit inbox_id; Dummy/kein Item → Kontext zurücksetzen.
+        if ($selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id'])) {
+            $this->selectedInboxId = (int) $selected['inbox_id'];
+            $this->selectedSubject = (string) ($selected['subject'] ?? $selected['sender'] ?? 'Eingang');
+        } else {
+            $this->selectedInboxId = null;
+            $this->selectedSubject = null;
+        }
 
         return view('home::livewire.inbox', [
             'channels'    => $this->channels($counts),
@@ -652,17 +654,34 @@ class Inbox extends Component
     }
 
     /**
-     * Plattform-Standard: den Kontext des gewählten Items ans Terminal dispatchen.
-     * model=null → kein Pin (Dummy/kein Item gewählt). Das Terminal surft darauf
-     * die kontext-agnostische „Verknüpfungen"-App (organization) ein.
+     * Seitenkontext für das Kontext-Panel + Terminal (Trait HasPageContext). Das
+     * gewählte echte Inbox-Item wird zum Kontext; daraus leitet der Trait die
+     * verfügbaren Apps ab — u. a. „Verknüpfungen" (DimensionLinks), über die das Item
+     * an einen Org-Knoten gehängt wird. Kein/Dummy-Item → null → Kontext zurückgesetzt.
+     *
+     * Soft-gekoppelt: die FQCN kommt über den Morph-Alias `inbox_item` (von Core,
+     * InboxEngineServiceProvider registriert) — home referenziert die Inbox-Klasse
+     * nicht direkt. Fehlt der Morph-Eintrag → null → kein Pin (graceful).
      */
-    public function rendered(): void
+    protected function pageContext(): ?Model
     {
-        $this->dispatch('comms', $this->commsCtx ?? [
-            'model'   => null,
-            'modelId' => null,
-            'subject' => 'Eingang',
+        if (! $this->selectedInboxId) {
+            return null;
+        }
+
+        $model = Relation::getMorphedModel('inbox_item');
+        if (! $model || ! class_exists($model)) {
+            return null;
+        }
+
+        return $model::find($this->selectedInboxId);
+    }
+
+    protected function pageContextOptions(): array
+    {
+        return [
             'source'  => 'home.inbox',
-        ]);
+            'subject' => $this->selectedSubject ?? 'Eingang',
+        ];
     }
 }

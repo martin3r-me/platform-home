@@ -120,9 +120,10 @@
                     </x-nx-callout>
                 @endif
 
-                {{-- Org-Kontext (Verknüpfungen) lebt jetzt in der Terminal-App
-                     „Verknüpfungen" (organization DimensionLinks) — das gewählte
-                     Item wird via dispatch('comms') ans Terminal gepinnt. --}}
+                {{-- Org-Kontext (Verknüpfungen) lebt im rechten Kontext-Panel
+                     (core.context-panel). Das gewählte Item wird über HasPageContext
+                     als `page-context` gepinnt → App „Verknüpfungen" (organization
+                     DimensionLinks) hängt es an einen Org-Knoten. --}}
 
                 {{-- Kanal-spezifischer Body (Anker der Einheit) --}}
                 @include('home::partials.inbox.body-dispatch', ['item' => $selected, 'inUnit' => false])
