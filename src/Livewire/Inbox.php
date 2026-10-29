@@ -802,7 +802,6 @@ class Inbox extends Component
 
         return view('home::livewire.inbox', [
             'channels'    => $this->channels($counts),
-            'statuses'    => $this->statuses(),
             'items'       => $filtered,
             'eingangOpen' => (int) ($counts['all'] ?? 0),
         ])->layout('platform::layouts.app');

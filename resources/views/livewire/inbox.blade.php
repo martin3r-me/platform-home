@@ -82,7 +82,8 @@
             </div>
         </div>
 
-        {{-- Filterleiste: Kanal × Status, kompakt & ruhig, volle Breite --}}
+        {{-- Filterleiste: nur Typ (Kanal). Status-Filter raus — Snooze kommt von
+             allein zurück, Erledigt ist weg; das braucht keinen Filter. --}}
         <div class="shrink-0 border-b border-[color:var(--nx-line)] bg-[color:var(--nx-surface)]">
             <div class="flex flex-wrap items-center gap-1 px-6 py-2">
                 @foreach($channels as $c)
@@ -93,13 +94,6 @@
                         @if($c['count'])
                             <span class="tabular-nums text-[color:var(--nx-faint)]">{{ $c['count'] }}</span>
                         @endif
-                    </button>
-                @endforeach
-                <span class="mx-1 h-4 w-px bg-[color:var(--nx-line)]"></span>
-                @foreach($statuses as $s)
-                    <button type="button" wire:click="setStatus('{{ $s['key'] }}')"
-                            class="rounded-md px-2 py-1 text-xs font-medium transition-colors {{ $status === $s['key'] ? 'bg-[color:var(--nx-accent-soft)] text-[color:var(--nx-text)]' : 'text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-hover)]' }}">
-                        {{ $s['label'] }}
                     </button>
                 @endforeach
             </div>
@@ -121,15 +115,10 @@
                         @svg('heroicon-o-check', 'h-3.5 w-3.5') Erledigt
                     </button>
 
-                    <button type="button" wire:click="bulkIgnore" wire:loading.attr="disabled"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--nx-text)] transition-colors hover:border-[color:var(--nx-danger,var(--nx-line))] hover:text-[color:var(--nx-danger,var(--nx-text))]">
-                        @svg('heroicon-o-eye-slash', 'h-3.5 w-3.5') Ignorieren
-                    </button>
-
                     <div x-data="{ open: false }" class="relative">
                         <button type="button" @click="open = !open"
                                 class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--nx-text)] transition-colors hover:border-[color:var(--nx-accent)]">
-                            @svg('heroicon-o-clock', 'h-3.5 w-3.5') Wiedervorlage
+                            @svg('heroicon-o-clock', 'h-3.5 w-3.5') Später
                         </button>
                         <div x-show="open" x-cloak @click.outside="open = false" x-transition.opacity.duration.100ms
                              class="absolute left-0 z-30 mt-1 w-44 overflow-hidden rounded-[10px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] py-1 shadow-sm">

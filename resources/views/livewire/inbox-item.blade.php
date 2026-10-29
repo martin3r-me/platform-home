@@ -41,12 +41,13 @@
                         @svg('heroicon-o-check', 'h-4 w-4') Erledigt
                     </button>
                     <div x-data="{ open: false }" class="relative">
-                        <button type="button" @click="open = !open"
+                        <button type="button" @click="open = !open" title="Später – kommt automatisch zurück"
                                 class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] px-3 py-1.5 text-sm font-medium text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-hover)]">
-                            @svg('heroicon-o-clock', 'h-4 w-4') Wiedervorlage
+                            @svg('heroicon-o-clock', 'h-4 w-4') Später
                         </button>
                         <div x-show="open" x-cloak @click.outside="open = false" x-transition.opacity.duration.100ms
                              class="absolute left-0 z-20 mt-1 w-44 overflow-hidden rounded-[10px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] py-1 shadow-sm">
+                            <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--nx-faint)]">Später erinnern</div>
                             @foreach(['In 1 Stunde' => 1, 'Heute Abend' => 8, 'Morgen früh' => 20, 'Nächste Woche' => 168] as $label => $h)
                                 <button type="button" wire:click="snooze({{ (int) $item['inbox_id'] }}, {{ $h }})" @click="open = false"
                                         class="block w-full px-3 py-1.5 text-left text-xs text-[color:var(--nx-text)] hover:bg-[color:var(--nx-hover)]">
@@ -55,11 +56,6 @@
                             @endforeach
                         </div>
                     </div>
-                    <button type="button" wire:click="ignore({{ (int) $item['inbox_id'] }})" wire:loading.attr="disabled"
-                            title="Ignorieren – dauerhaft ausblenden"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] px-3 py-1.5 text-sm font-medium text-[color:var(--nx-muted)] hover:border-[color:var(--nx-danger,var(--nx-line))] hover:bg-[color:var(--nx-hover)] hover:text-[color:var(--nx-danger,var(--nx-text))]">
-                        @svg('heroicon-o-eye-slash', 'h-4 w-4') Ignorieren
-                    </button>
 
                     <span class="mx-1 h-5 w-px bg-[color:var(--nx-line)]"></span>
 

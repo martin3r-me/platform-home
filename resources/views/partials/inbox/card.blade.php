@@ -1,6 +1,6 @@
 {{-- Eingang-Zeile (Outlook-artig). Oben IMMER klein & ausgeschrieben der Typ
      (E-MAIL / MEETING / AUFNAHME / …), darunter Betreff + 1-Zeilen-Vorschau.
-     Modell: die Zeile trägt NUR Triage (Erledigt / Wiedervorlage, echte inbox_id);
+     Modell: die Zeile trägt NUR Triage (Erledigt / Später, echte inbox_id);
      ein Klick auf die Zeile (stretched link) öffnet die Item-View (/eingang/{item}).
      $it: Listen-Item (mapRow). $dense (optional) = engere Variante für die Box. --}}
 @php
@@ -71,9 +71,8 @@
         @endif
     </div>
 
-    {{-- Triage rechts: klar als Aktionen erkennbar, immer erreichbar, echte inbox_id.
-         Erledigt = Hauptaktion (beschriftet, grüner Hover „abgehakt → raus aus dem
-         Eingang"); Wiedervorlage = Uhr mit Preset-Menü. --}}
+    {{-- Triage rechts: genau ZWEI Gesten. Erledigt = weg (grüner Hover „abgehakt →
+         raus aus dem Eingang"); Später = Snooze (kommt automatisch zurück). --}}
     @if($real)
         <div class="relative z-10 flex shrink-0 items-center gap-1.5">
             <button type="button" wire:click="markDone({{ $it['inbox_id'] }})" wire:loading.attr="disabled"
@@ -83,20 +82,15 @@
                 <span class="whitespace-nowrap">Erledigt</span>
             </button>
 
-            <button type="button" wire:click="ignore({{ $it['inbox_id'] }})" wire:loading.attr="disabled"
-                    title="Ignorieren – dauerhaft ausblenden"
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[color:var(--nx-line)] text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-danger,var(--nx-muted))] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-danger,var(--nx-text))]">
-                @svg('heroicon-o-eye-slash', 'h-3.5 w-3.5')
-            </button>
-
             <div x-data="{ open: false }" class="relative">
-                <button type="button" @click="open = !open" title="Wiedervorlage – später erneut vorlegen"
-                        class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[color:var(--nx-line)] text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-accent)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-text)]">
-                    @svg('heroicon-o-clock', 'h-3.5 w-3.5')
+                <button type="button" @click="open = !open" title="Später – kommt automatisch zurück"
+                        class="inline-flex h-7 items-center gap-1 rounded-md border border-[color:var(--nx-line)] px-2 text-[11px] font-medium text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-accent)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-text)]">
+                    @svg('heroicon-o-clock', 'h-3.5 w-3.5 shrink-0')
+                    <span class="whitespace-nowrap">Später</span>
                 </button>
                 <div x-show="open" x-cloak @click.outside="open = false" x-transition.opacity.duration.100ms
                      class="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-[10px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] py-1 shadow-sm">
-                    <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--nx-faint)]">Wiedervorlage</div>
+                    <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--nx-faint)]">Später erinnern</div>
                     @foreach(['In 1 Stunde' => 1, 'Heute Abend' => 8, 'Morgen früh' => 20, 'Nächste Woche' => 168] as $label => $h)
                         <button type="button" wire:click="snooze({{ $it['inbox_id'] }}, {{ $h }})" @click="open = false"
                                 class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-[color:var(--nx-text)] hover:bg-[color:var(--nx-hover)]">
