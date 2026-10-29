@@ -316,19 +316,35 @@ class Inbox extends Component
      */
     protected function channels(array $counts = []): array
     {
-        $defs = [
-            ['key' => 'all',       'label' => 'Alle',      'icon' => 'heroicon-o-inbox'],
-            ['key' => 'mail',      'label' => 'E-Mail',    'icon' => 'heroicon-o-envelope'],
-            ['key' => 'meeting',   'label' => 'Meeting',   'icon' => 'heroicon-o-calendar-days'],
-            ['key' => 'task',      'label' => 'Aufgabe',   'icon' => 'heroicon-o-clipboard-document-check'],
-            ['key' => 'ticket',    'label' => 'Ticket',    'icon' => 'heroicon-o-lifebuoy'],
-            ['key' => 'message',   'label' => 'Teams',     'icon' => 'heroicon-o-chat-bubble-left'],
-            ['key' => 'call',      'label' => 'Anruf',     'icon' => 'heroicon-o-phone'],
-            ['key' => 'recording', 'label' => 'Aufnahme',  'icon' => 'heroicon-o-microphone'],
-            ['key' => 'system',    'label' => 'System',    'icon' => 'heroicon-o-bell'],
-        ];
+        // Nur Kanäle, die home tatsächlich rendern kann (= mapRow-Fälle + Core-
+        // Provider). message (Teams)/system haben weder Provider noch mapRow — sie
+        // liegen zwar in inbox_items, sind aber nicht darstellbar, also hier nicht
+        // führen (sonst „Teams 89" ohne Einträge).
+        $defs = [['key' => 'all', 'label' => 'Alle', 'icon' => 'heroicon-o-inbox']];
+        foreach ($this->renderableChannels() as $c) {
+            $defs[] = $c;
+        }
 
         return array_map(fn ($c) => $c + ['count' => $counts[$c['key']] ?? 0], $defs);
+    }
+
+    /**
+     * Die Kanäle, die home wirklich darstellen kann (Core-SourceList-Provider +
+     * recording, und mapRow hat je einen Fall). Steuert Filter-Chips UND Zähler,
+     * damit Zahl und Liste zusammenpassen.
+     *
+     * @return array<int,array{key:string,label:string,icon:string}>
+     */
+    protected function renderableChannels(): array
+    {
+        return [
+            ['key' => 'mail',      'label' => 'E-Mail',   'icon' => 'heroicon-o-envelope'],
+            ['key' => 'meeting',   'label' => 'Meeting',  'icon' => 'heroicon-o-calendar-days'],
+            ['key' => 'call',      'label' => 'Anruf',    'icon' => 'heroicon-o-phone'],
+            ['key' => 'task',      'label' => 'Aufgabe',  'icon' => 'heroicon-o-clipboard-document-check'],
+            ['key' => 'ticket',    'label' => 'Ticket',   'icon' => 'heroicon-o-lifebuoy'],
+            ['key' => 'recording', 'label' => 'Aufnahme', 'icon' => 'heroicon-o-microphone'],
+        ];
     }
 
     protected function statuses(): array
@@ -750,12 +766,26 @@ class Inbox extends Component
             return ['all' => 0];
         }
         try {
-            $counts = app($contract)->openCountsForUser($user->id, $user->currentTeam->id);
-
-            return is_array($counts) ? $counts : ['all' => 0];
+            $raw = app($contract)->openCountsForUser($user->id, $user->currentTeam->id);
         } catch (\Throwable $e) {
             return ['all' => 0];
         }
+        if (! is_array($raw)) {
+            return ['all' => 0];
+        }
+
+        // Nur darstellbare Kanäle zählen — message (Teams)/system sind in inbox_items,
+        // aber nicht renderbar; sie dürfen weder Chip noch Summe aufblähen.
+        $counts = ['all' => 0];
+        foreach ($this->renderableChannels() as $ch) {
+            $c = (int) ($raw[$ch['key']] ?? 0);
+            if ($c > 0) {
+                $counts[$ch['key']] = $c;
+            }
+            $counts['all'] += $c;
+        }
+
+        return $counts;
     }
 
     /**
