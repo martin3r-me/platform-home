@@ -3,6 +3,14 @@
         <x-ui-page-navbar title="Eingang" icon="heroicon-o-inbox" />
     </x-slot>
 
+    {{-- „Heute"-Schiene: orientierende Kontext-Spalte links (aus dem früheren
+         Dashboard). Collapsible/resizable über die ui-page-sidebar. --}}
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Heute" icon="heroicon-o-sun" width="w-72" :defaultOpen="true" side="left">
+            @include('home::partials.today-rail')
+        </x-ui-page-sidebar>
+    </x-slot>
+
     {{-- STROM: ein durchlaufendes Postfach über die ganze Breite (Outlook-artig).
          Oben die Filter, darunter die Zeilen. Jede Zeile trägt nur Triage; ein
          Klick auf die Zeile öffnet die eigene Item-View (/eingang/{item}). --}}

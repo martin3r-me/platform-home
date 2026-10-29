@@ -7,9 +7,16 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Platform\Core\Livewire\Concerns\HasPageContext;
+use Platform\Home\Livewire\Concerns\ProvidesTodayRail;
 
 /**
- * Eingang – die persönliche Inbox als Herzstück von HOME (Cockpit-Modell, nx-Stil).
+ * Cockpit – die persönliche Landefläche von HOME (nx-Stil). Eingang + „Heute"
+ * zusammengeführt: links die orientierende Kontext-Schiene (ProvidesTodayRail:
+ * Begrüßung, Check-in, Termine heute, Fokus, Knoten-KPIs), in der Mitte der
+ * vollbreite Triage-Strom. Outlook-Muster: Kontext-Rail + Nachrichtenliste. Das
+ * frühere eigenständige Dashboard ist hierin aufgegangen; `/` und `/eingang`
+ * rendern dieselbe Fläche. Reflektierende Tiefe (7-Tage-Zeiten, Ziele, Aufgaben)
+ * bleibt auf ihren eigenen Seiten, nur als „Details →" verlinkt.
  *
  * STROM + EIGENE ITEM-VIEW (eine Route, zwei Modi — $itemId steuert):
  *   · STROM (/eingang): ein Fluss aus Kacheln. Die Kachel trägt NUR Triage
@@ -27,6 +34,7 @@ use Platform\Core\Livewire\Concerns\HasPageContext;
 class Inbox extends Component
 {
     use HasPageContext;
+    use ProvidesTodayRail;
 
     /** Detail-Modus: gesetzt = die eigene Item-View (Route /eingang/{item}); null = Stream. */
     public ?int $itemId = null;
@@ -43,6 +51,12 @@ class Inbox extends Component
     public function mount(?int $item = null): void
     {
         $this->itemId = $item ?: null;
+
+        // Cockpit-Landing (Stream-Modus): die „Heute"-Schiene füllen. Die Item-View
+        // braucht die Schiene nicht — dort spart das die KPI-/Kalender-Queries.
+        if ($this->itemId === null) {
+            $this->loadTodayRail();
+        }
     }
 
     public function setChannel(string $channel): void
@@ -583,12 +597,19 @@ class Inbox extends Component
 
         $filtered = array_values(array_filter($all, fn ($it) => $this->matches($it)));
 
+        // Eingang-Zähler für die „Heute"-Schiene — aus derselben Liste, damit Zahl
+        // und Strom immer zusammenpassen (unabhängig vom aktiven Filter).
+        $eingangOpen = count(array_filter($all, fn ($it) => ($it['status'] ?? '') !== 'done'));
+        $eingangUnread = count(array_filter($all, fn ($it) => !empty($it['unread'])));
+
         $this->itemSubject = null;
 
         return view('home::livewire.inbox', [
-            'channels' => $this->channels($counts),
-            'statuses' => $this->statuses(),
-            'items'    => $filtered,
+            'channels'      => $this->channels($counts),
+            'statuses'      => $this->statuses(),
+            'items'         => $filtered,
+            'eingangOpen'   => $eingangOpen,
+            'eingangUnread' => $eingangUnread,
         ])->layout('platform::layouts.app');
     }
 

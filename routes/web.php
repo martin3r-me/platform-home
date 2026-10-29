@@ -8,7 +8,6 @@
  * Views sind aktuell Platzhalter – Struktur zuerst.
  */
 
-use Platform\Home\Livewire\Dashboard;
 use Platform\Home\Livewire\Inbox;
 use Platform\Home\Livewire\MeinTag;
 use Platform\Home\Livewire\Agenda;
@@ -23,8 +22,10 @@ use Platform\Home\Livewire\Notizen;
 use Platform\Home\Livewire\Benachrichtigungen;
 use Platform\Home\Livewire\Profil;
 
-// Übersicht
-Route::get('/',        Dashboard::class)->name('home.dashboard');
+// Cockpit: Eingang + „Heute" zusammengeführt. `/` und `/eingang` rendern dieselbe
+// Fläche (Strom + Kontext-Schiene); `/eingang/{item}` ist die eigene Item-View.
+// Name `home.dashboard` bleibt für Alt-Links/Redirects erhalten.
+Route::get('/',        Inbox::class)->name('home.dashboard');
 Route::get('/eingang/{item?}', Inbox::class)->whereNumber('item')->name('home.inbox');
 Route::get('/mein-tag', MeinTag::class)->name('home.mein-tag');
 Route::get('/agenda',   Agenda::class)->name('home.agenda');
