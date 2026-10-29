@@ -11,124 +11,87 @@ use Platform\Core\Livewire\Concerns\HasPageContext;
 /**
  * Eingang – die persönliche Inbox als Herzstück von HOME (Cockpit-Modell, nx-Stil).
  *
- * STROM + KONTEXT-BAR: ein Fluss aus Kacheln (Mitte), rechts eine Kontext-Bar für
- * die gewählte Kachel. Saubere Trennung VIEW ↔ EVENT:
- *   · VIEW  = typ-dispatched: jede Kachel klappt ihren kanal-spezifischen Body auf
- *             (body-dispatch → body-{mail,meeting,recording,…}). Bedeutung zuerst:
- *             Betreff + Teaser oben, das Rohe darunter eingeklappt.
- *   · TRIAGE-EVENTS = generisch & kachel-gebunden (Erledigt/Wiedervorlage) — der
- *             Button reicht die (Offset-)Listen-ID durch; EINE Stream-Komponente,
- *             keine Kachel-Komponenten.
- *   · KONTEXT-EVENTS = typ-abhängig, in der rechten Bar an der AUSWAHL (→ Aufgabe/
- *             Ticket echt; Antworten/Agenda folgen). „An Knoten hängen" läuft über
- *             das globale Kontext-Panel (HasPageContext → page-context).
- * Nur die gewählte (aufgeklappte) Kachel lädt ihr Detail nach = ein Query/Render.
- * Filter: Kanal × Status als schlanke Leiste über dem Strom. Daten noch Hybrid
- * (echter Stream via Core-InboxQuery + Dummies für Kanäle ohne Live-Daten).
+ * STROM + EIGENE ITEM-VIEW (eine Route, zwei Modi — $itemId steuert):
+ *   · STROM (/eingang): ein Fluss aus Kacheln. Die Kachel trägt NUR Triage
+ *     (Erledigt/Wiedervorlage, generisch, auf der echten inbox_id); der Klick auf
+ *     den Kachelkörper navigiert in die Item-View. Keine In-Place-Expansion.
+ *   · ITEM-VIEW (/eingang/{item}): die eigene, fokussierte Seite eines Items —
+ *     typ-dispatched (body-dispatch → body-{mail,meeting,recording,…}) samt
+ *     Facetten (Aufnahme unter ihrem Meeting), plus die Kontext-Aktionen
+ *     (→ Aufgabe/→ Ticket echt; Antworten/Agenda folgen) und „An Knoten hängen"
+ *     über das globale Kontext-Panel (HasPageContext → page-context).
+ * Triage wirkt auf die ganze Einheit; aus der Item-View geht's danach zurück in
+ * den Strom. Daten noch Hybrid (echter Stream via Core-InboxQuery + Dummies für
+ * Kanäle ohne Live-Daten). Filter Kanal × Status als schlanke Leiste über dem Strom.
  */
 class Inbox extends Component
 {
     use HasPageContext;
 
-    public ?int $selectedId = 1;
+    /** Detail-Modus: gesetzt = die eigene Item-View (Route /eingang/{item}); null = Stream. */
+    public ?int $itemId = null;
+
     public string $channel = 'all';
     public string $status = 'all';
 
     /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
     public string $notice = '';
 
-    /** Gewähltes echtes Item (inbox_id + Betreff) als Seitenkontext — siehe pageContext(). */
-    protected ?int $selectedInboxId = null;
-    protected ?string $selectedSubject = null;
-
-    /** Tiefklick-Ziel (inbox_id aus home.inbox/{item}) — einmalig in render() aufgelöst. */
-    protected ?int $openInboxId = null;
+    /** Betreff des Detail-Items als Seitenkontext — siehe pageContext(). */
+    protected ?string $itemSubject = null;
 
     public function mount(?int $item = null): void
     {
-        $this->openInboxId = $item ?: null;
-        $this->selectFirst();
-    }
-
-    public function selectItem(int $id): void
-    {
-        $this->selectedId = $id;
-        $this->notice = '';
-    }
-
-    /**
-     * Kachel auf-/zuklappen. Im Stream ist die gewählte Kachel die aufgeklappte
-     * (nur sie lädt ihr Detail nach — ein Query pro Render). Erneuter Klick auf
-     * die offene Kachel klappt sie zu und gibt den Kontext frei.
-     */
-    public function toggleItem(int $id): void
-    {
-        $this->selectedId = $this->selectedId === $id ? null : $id;
-        $this->notice = '';
+        $this->itemId = $item ?: null;
     }
 
     public function setChannel(string $channel): void
     {
         $this->channel = $channel;
-        $this->selectFirst();
     }
 
     public function setStatus(string $status): void
     {
         $this->status = $status;
-        $this->selectFirst();
     }
 
     /**
-     * Erledigt: triagiert → raus aus dem Eingang. Setzt den Inbox-Status auf Done;
-     * listForUser zieht nur 'new', also verschwindet das Item. Knoten-Link und
-     * Zeit-Buchung bleiben bestehen (MaterializeMeetingTime filtert nicht nach
-     * Inbox-Status).
-     *
-     * Triage ist generisch & kachel-gebunden: der Button an JEDER Kachel reicht
-     * die (Offset-)Listen-ID durch; ohne Argument fällt es auf die Auswahl zurück.
+     * Erledigt: triagiert → raus aus dem Eingang (Status = Done, wirkt auf die
+     * ganze Einheit). Aus dem Stream verschwindet die Kachel beim Re-Render; aus
+     * der Detail-View geht's zurück in den Stream. Triage trägt die ECHTE inbox_id
+     * (die Kachel reicht $it['inbox_id'] durch; die Detail-View $this->itemId).
      */
-    public function markDone(?int $listId = null): void
+    public function markDone(int $itemId)
     {
-        $id = $this->realIdOf($listId);
-        if (!$id) {
-            return;
-        }
+        return $this->triage(fn ($s) => $s->markDone($itemId));
+    }
+
+    /**
+     * Wiedervorlage (Snooze): Einheit für X Stunden aus dem Eingang nehmen; danach
+     * taucht sie wieder auf. Status = Snoozed.
+     */
+    public function snooze(int $itemId, int $hours = 4)
+    {
+        return $this->triage(fn ($s) => $s->snooze($itemId, max(1, $hours)));
+    }
+
+    /**
+     * Gemeinsamer Triage-Lauf: Service best-effort anwenden; aus der Detail-View
+     * zurück in den Stream navigieren (das Item ist dort ohnehin weg).
+     */
+    protected function triage(callable $op)
+    {
         try {
-            app(\Platform\Core\Inbox\Services\TriageService::class)->markDone($id);
+            $op(app(\Platform\Core\Inbox\Services\TriageService::class));
         } catch (\Throwable $e) {
             // still
         }
 
-        $this->deselectIf($listId);
-    }
-
-    /**
-     * Wiedervorlage (Snooze): Item (samt Thread/Serie) für X Stunden aus dem
-     * Eingang nehmen. listForUser blendet Items mit snoozed_until in der Zukunft
-     * aus; danach taucht die Einheit wieder auf. Status = Snoozed (nicht „handled").
-     */
-    public function snooze(int $hours = 4, ?int $listId = null): void
-    {
-        $id = $this->realIdOf($listId);
-        if (!$id) {
-            return;
-        }
-        try {
-            app(\Platform\Core\Inbox\Services\TriageService::class)->snooze($id, $hours);
-        } catch (\Throwable $e) {
-            // still
+        if ($this->itemId !== null) {
+            return $this->redirect(route('home.inbox'), navigate: true);
         }
 
-        $this->deselectIf($listId);
-    }
-
-    /** Nach einer Triage die Auswahl leeren, wenn die triagierte Kachel die gewählte war. */
-    protected function deselectIf(?int $listId): void
-    {
-        if ($listId === null || $listId === $this->selectedId) {
-            $this->selectedId = null;
-        }
+        return null;
     }
 
     /**
@@ -178,11 +141,10 @@ class Inbox extends Component
         $this->handoff('ticket', 'Ticket angelegt.');
     }
 
-    /** Gemeinsamer Handoff-Aufruf für → Aufgabe / → Ticket. */
+    /** Gemeinsamer Handoff-Aufruf für → Aufgabe / → Ticket (nur in der Detail-View). */
     protected function handoff(string $target, string $okMessage): void
     {
-        $id = $this->realIdOf();
-        if (!$id) {
+        if (!$this->itemId) {
             return;
         }
         $contract = \Platform\Core\Inbox\Contracts\ItemHandoff::class;
@@ -190,27 +152,12 @@ class Inbox extends Component
             return;
         }
         try {
-            $ok = app($contract)->handoff($id, $target);
+            $ok = app($contract)->handoff($this->itemId, $target);
             $this->notice = $ok ? $okMessage : 'Ziel-Modul nicht verfügbar.';
         } catch (\Throwable $e) {
             // still
         }
     }
-
-    /**
-     * Reale Inbox-Item-ID zu einer (Offset-)Listen-ID — oder, ohne Argument, zur
-     * aktuellen Auswahl. Dummy/keins → null. Echte Items liegen im ID-Raum ab
-     * 10000 (Kanal-Offset je 10000); die reale inbox_id ist der Rest modulo 10000.
-     */
-    protected function realIdOf(?int $listId = null): ?int
-    {
-        $listId ??= $this->selectedId;
-        if (!$listId || $listId < 10000) {
-            return null;
-        }
-        return $listId % 10000;
-    }
-
 
     protected function matches(array $item): bool
     {
@@ -602,10 +549,10 @@ class Inbox extends Component
      *
      * @return array<string,mixed>
      */
-    protected function detailFor(?string $channel, int $inboxId): array
+    protected function detailFor(int $inboxId): array
     {
         $contract = \Platform\Core\Inbox\Contracts\InboxQuery::class;
-        if (!$channel || $inboxId <= 0 || !interface_exists($contract)) {
+        if ($inboxId <= 0 || !interface_exists($contract)) {
             return [];
         }
         try {
@@ -617,35 +564,15 @@ class Inbox extends Component
         }
     }
 
-    /** Vorselektion: das erste Item der aktuellen Kanal/Status-Ansicht wählen. */
-    protected function selectFirst(): void
-    {
-        $filtered = array_values(array_filter($this->mergedItems(), fn ($it) => $this->matches($it)));
-        $this->selectedId = $filtered[0]['id'] ?? null;
-    }
-
     public function render()
     {
-        $all = $this->mergedItems();
+        return $this->itemId !== null ? $this->renderDetail() : $this->renderStream();
+    }
 
-        // Tiefklick aus dem Verknüpfungen-Panel (home.inbox/{item}) → das Item wählen.
-        // Liste-IDs sind Offset-kodiert (mapRow) — über inbox_id den passenden Eintrag
-        // finden, oder den Anker, dessen Facette das Item ist. Einmalig beim Laden.
-        if ($this->openInboxId) {
-            foreach ($all as $it) {
-                if ((int) ($it['inbox_id'] ?? 0) === $this->openInboxId) {
-                    $this->selectedId = $it['id'];
-                    break;
-                }
-                foreach ($it['facets'] ?? [] as $f) {
-                    if ((int) ($f['inbox_id'] ?? 0) === $this->openInboxId) {
-                        $this->selectedId = $it['id'];
-                        break 2;
-                    }
-                }
-            }
-            $this->openInboxId = null;
-        }
+    /** Stream: der Kachel-Fluss mit Filtern. Pinnt keinen Seitenkontext. */
+    protected function renderStream()
+    {
+        $all = $this->mergedItems();
 
         // Kanal-Counts aus der tatsächlichen Liste — Zahl und Inhalt passen immer zusammen.
         $counts = ['all' => count($all)];
@@ -656,56 +583,127 @@ class Inbox extends Component
 
         $filtered = array_values(array_filter($all, fn ($it) => $this->matches($it)));
 
-        $selected = null;
-        foreach ($all as $it) {
-            if ($it['id'] === $this->selectedId) {
-                $selected = $it;
-                break;
-            }
-        }
-
-        if ($selected && ($selected['real'] ?? false)) {
-            // Anker-Detail nachladen …
-            $selected = array_merge(
-                $selected,
-                $this->detailFor($selected['channel'] ?? null, (int) $selected['inbox_id'])
-            );
-
-            // … und die Facetten der Einheit (z.B. die Aufnahme unter dem Meeting)
-            // als eigene Detail-Blöcke stapeln.
-            $facetDetails = [];
-            foreach ($selected['facets'] ?? [] as $facet) {
-                $fid = (int) ($facet['inbox_id'] ?? 0);
-                $fch = $facet['channel'] ?? null;
-                if ($fid <= 0 || ! $fch) {
-                    continue;
-                }
-                $detail = $this->detailFor($fch, $fid);
-                if ($detail) {
-                    $facetDetails[] = array_merge($detail, ['channel' => $fch, 'inbox_id' => $fid]);
-                }
-            }
-            $selected['facet_details'] = $facetDetails;
-        }
-
-        // Gewähltes echtes Item als Seitenkontext merken → HasPageContext::rendered()
-        // dispatcht daraus `page-context` (neues Kontext-Panel, inkl. „Verknüpfungen"/
-        // DimensionLinks zum Hängen an einen Org-Knoten) plus die Alt-Events (comms …).
-        // Nur „reale" Items mit inbox_id; Dummy/kein Item → Kontext zurücksetzen.
-        if ($selected && ($selected['real'] ?? false) && ! empty($selected['inbox_id'])) {
-            $this->selectedInboxId = (int) $selected['inbox_id'];
-            $this->selectedSubject = (string) ($selected['subject'] ?? $selected['sender'] ?? 'Eingang');
-        } else {
-            $this->selectedInboxId = null;
-            $this->selectedSubject = null;
-        }
+        $this->itemSubject = null;
 
         return view('home::livewire.inbox', [
-            'channels'    => $this->channels($counts),
-            'statuses'    => $this->statuses(),
-            'items'       => $filtered,
-            'selected'    => $selected,
+            'channels' => $this->channels($counts),
+            'statuses' => $this->statuses(),
+            'items'    => $filtered,
         ])->layout('platform::layouts.app');
+    }
+
+    /**
+     * Detail: die eigene View eines Items (Route /eingang/{item}). Zentriert auf den
+     * Anker der Einheit (Aufnahme → ihr Meeting), lädt dessen Kanal-Detail + die
+     * Facetten und pinnt das Item als Seitenkontext (→ Verknüpfungen/Kontext-Panel).
+     */
+    protected function renderDetail()
+    {
+        $item = $this->buildDetail($this->itemId);
+
+        $this->itemSubject = $item
+            ? (string) ($item['subject'] ?? $item['sender'] ?? 'Eingang')
+            : null;
+
+        return view('home::livewire.inbox-item', [
+            'item' => $item,
+        ])->layout('platform::layouts.app');
+    }
+
+    /**
+     * Vollständiges Detail-Array eines Items für die eigene View: Kanal-Detail des
+     * Anker-Items + Präsentations-Felder (Icon/Label/Zeit) + die Facetten-Details.
+     * Leeres Array, wenn das Item nicht (mehr) existiert.
+     *
+     * @return array<string,mixed>
+     */
+    protected function buildDetail(int $inboxId): array
+    {
+        $anchorId = $this->anchorIdOf($inboxId);
+        $detail   = $this->detailFor($anchorId);
+        if (!$detail) {
+            return [];
+        }
+
+        [$icon, $label] = $this->channelMeta($detail['channel'] ?? null);
+
+        $detail['real']          = true;
+        $detail['inbox_id']      = $anchorId;
+        $detail['icon']          = $icon;
+        $detail['channel_label'] = $label;
+        $detail['sender']        = $detail['sender_label'] ?? ($detail['sender'] ?? '');
+        $detail['time']          = $this->recTime($detail['received_at'] ?? null);
+        $detail['facet_details'] = $this->facetDetailsFor($anchorId);
+
+        return $detail;
+    }
+
+    /** Anker der Einheit zu einer Item-ID (ohne UnitResolver: die ID selbst). */
+    protected function anchorIdOf(int $inboxId): int
+    {
+        $cls = \Platform\Core\Inbox\Services\UnitResolver::class;
+        if (!class_exists($cls)) {
+            return $inboxId;
+        }
+        try {
+            return app($cls)->anchorId($inboxId);
+        } catch (\Throwable $e) {
+            return $inboxId;
+        }
+    }
+
+    /**
+     * Facetten-Details der Einheit (alle Mitglieder außer dem Anker), jeweils als
+     * eigener Detail-Block fürs body-dispatch.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    protected function facetDetailsFor(int $anchorId): array
+    {
+        $cls = \Platform\Core\Inbox\Services\UnitResolver::class;
+        if (!class_exists($cls)) {
+            return [];
+        }
+        try {
+            $unit = app($cls)->unitFor($anchorId);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($unit['members'] ?? [] as $m) {
+            $mid = (int) ($m['id'] ?? 0);
+            if ($mid <= 0 || $mid === $anchorId) {
+                continue;
+            }
+            $d = $this->detailFor($mid);
+            if ($d) {
+                $out[] = array_merge($d, ['channel' => $m['channel'] ?? ($d['channel'] ?? null), 'inbox_id' => $mid]);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Präsentations-Meta (Icon, Label) je Kanal — für den Detail-Kopf, wo die
+     * Stream-mapRow nicht greift.
+     *
+     * @return array{0:string,1:string}
+     */
+    protected function channelMeta(?string $channel): array
+    {
+        return match ($channel) {
+            'mail'      => ['heroicon-o-envelope', 'E-Mail'],
+            'meeting'   => ['heroicon-o-calendar-days', 'Meeting'],
+            'task'      => ['heroicon-o-clipboard-document-check', 'Aufgabe'],
+            'ticket'    => ['heroicon-o-lifebuoy', 'Ticket'],
+            'message'   => ['heroicon-o-chat-bubble-left', 'Teams'],
+            'call'      => ['heroicon-o-phone', 'Anruf'],
+            'recording' => ['heroicon-o-microphone', 'Aufnahme'],
+            'system'    => ['heroicon-o-bell', 'System'],
+            default     => ['heroicon-o-inbox', 'Eingang'],
+        };
     }
 
     /**
@@ -720,7 +718,7 @@ class Inbox extends Component
      */
     protected function pageContext(): ?Model
     {
-        if (! $this->selectedInboxId) {
+        if (! $this->itemId) {
             return null;
         }
 
@@ -729,14 +727,14 @@ class Inbox extends Component
             return null;
         }
 
-        return $model::find($this->selectedInboxId);
+        return $model::find($this->itemId);
     }
 
     protected function pageContextOptions(): array
     {
         return [
             'source'  => 'home.inbox',
-            'subject' => $this->selectedSubject ?? 'Eingang',
+            'subject' => $this->itemSubject ?? 'Eingang',
         ];
     }
 }
