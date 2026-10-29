@@ -73,9 +73,9 @@ class Inbox extends Component
 
         $this->loadTodaySummary();
 
-        // „Zuletzt gestempelt" nur fürs Dashboard (eine zusätzliche Zeit-Query).
+        // Die schwereren Widget-Kontrakte nur fürs Dashboard (nicht im /eingang-Kopf).
         if ($this->view === 'dashboard') {
-            $this->loadLastStamp();
+            $this->loadDashboardExtras();
         }
     }
 
@@ -624,7 +624,37 @@ class Inbox extends Component
             'items'         => $open,
             'eingangOpen'   => count($open),
             'eingangUnread' => count(array_filter($open, fn ($it) => !empty($it['unread']))),
+            'widgets'       => $this->dashboardWidgets(),
         ])->layout('platform::layouts.app');
+    }
+
+    /**
+     * Katalog der sekundären Dashboard-Widgets (unter der Box-Reihe), je nur wenn
+     * sein Kontrakt verfügbar ist. Erster Baustein des späteren Abo-Systems: hier
+     * würde künftig die User-Auswahl (abonnierte Keys) dazwischenfiltern. Reihenfolge
+     * = Anzeige-Reihenfolge; `partials/widgets/{key}.blade.php` rendert jeweils.
+     *
+     * @return array<int,string>
+     */
+    protected function dashboardWidgets(): array
+    {
+        $widgets = [];
+
+        if ($this->calendarAvailable) {
+            $widgets[] = 'calendar';
+        }
+        $widgets[] = 'todos'; // Core — immer verfügbar
+        if ($this->goalsAvailable) {
+            $widgets[] = 'goals';
+        }
+        if ($this->coursesAvailable) {
+            $widgets[] = 'courses';
+        }
+        if ($this->orgAvailable && $this->hasPerson && !empty($this->vitalSigns)) {
+            $widgets[] = 'kpis';
+        }
+
+        return $widgets;
     }
 
     /** Stream: der Kachel-Fluss mit Filtern. Pinnt keinen Seitenkontext. */
