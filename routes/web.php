@@ -25,7 +25,7 @@ use Platform\Home\Livewire\Profil;
 
 // Übersicht
 Route::get('/',        Dashboard::class)->name('home.dashboard');
-Route::get('/eingang', Inbox::class)->name('home.inbox');
+Route::get('/eingang/{item?}', Inbox::class)->whereNumber('item')->name('home.inbox');
 Route::get('/mein-tag', MeinTag::class)->name('home.mein-tag');
 Route::get('/agenda',   Agenda::class)->name('home.agenda');
 Route::get('/agenda/{agenda}', AgendaBoard::class)->whereNumber('agenda')->name('home.agenda.show');

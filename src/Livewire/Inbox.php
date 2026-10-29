@@ -31,8 +31,12 @@ class Inbox extends Component
     protected ?int $selectedInboxId = null;
     protected ?string $selectedSubject = null;
 
-    public function mount(): void
+    /** Tiefklick-Ziel (inbox_id aus home.inbox/{item}) — einmalig in render() aufgelöst. */
+    protected ?int $openInboxId = null;
+
+    public function mount(?int $item = null): void
     {
+        $this->openInboxId = $item ?: null;
         $this->selectFirst();
     }
 
@@ -591,6 +595,25 @@ class Inbox extends Component
     public function render()
     {
         $all = $this->mergedItems();
+
+        // Tiefklick aus dem Verknüpfungen-Panel (home.inbox/{item}) → das Item wählen.
+        // Liste-IDs sind Offset-kodiert (mapRow) — über inbox_id den passenden Eintrag
+        // finden, oder den Anker, dessen Facette das Item ist. Einmalig beim Laden.
+        if ($this->openInboxId) {
+            foreach ($all as $it) {
+                if ((int) ($it['inbox_id'] ?? 0) === $this->openInboxId) {
+                    $this->selectedId = $it['id'];
+                    break;
+                }
+                foreach ($it['facets'] ?? [] as $f) {
+                    if ((int) ($f['inbox_id'] ?? 0) === $this->openInboxId) {
+                        $this->selectedId = $it['id'];
+                        break 2;
+                    }
+                }
+            }
+            $this->openInboxId = null;
+        }
 
         // Kanal-Counts aus der tatsächlichen Liste — Zahl und Inhalt passen immer zusammen.
         $counts = ['all' => count($all)];
