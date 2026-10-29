@@ -1,16 +1,14 @@
-{{-- Eingang-Zeile im Strom (Outlook-artig, volle Breite).
-     Modell: die Zeile trägt NUR Triage (Erledigt / Wiedervorlage, generisch auf
-     der echten inbox_id). Ein Klick auf die Zeile navigiert in die eigene
-     Item-View (/eingang/{item}) — dort lebt Inhalt + Kontext-Aktionen.
-     Technik: die ganze Zeile ist per "stretched link" klickbar (absolut
-     liegender <a>); der Inhalt liegt darüber mit pointer-events-none, nur die
-     Triage-Buttons fangen ihre Klicks selbst ab (pointer-events-auto, z-10).
-     $it: Listen-Item (mapRow). --}}
+{{-- Eingang-Zeile (Outlook-artig). Oben IMMER klein & ausgeschrieben der Typ
+     (E-MAIL / MEETING / AUFNAHME / …), darunter Betreff + 1-Zeilen-Vorschau.
+     Modell: die Zeile trägt NUR Triage (Erledigt / Wiedervorlage, echte inbox_id);
+     ein Klick auf die Zeile (stretched link) öffnet die Item-View (/eingang/{item}).
+     $it: Listen-Item (mapRow). $dense (optional) = engere Variante für die Box. --}}
 @php
     $real   = (bool) ($it['real'] ?? false);
     $teaser = trim((string) ($it['summary'] ?? $it['preview'] ?? ''));
     $unread = !empty($it['unread']);
     $padX   = ($dense ?? false) ? 'px-4' : 'px-6';
+    $type   = mb_strtoupper(trim((string) ($it['channel_label'] ?? 'Eingang')));
 
     $badges = collect();
     if (!empty($it['is_series'])) $badges->push(['heroicon-o-arrow-path', 'Serie' . (($it['series_count'] ?? 1) > 1 ? ' · ' . $it['series_count'] : '')]);
@@ -21,39 +19,40 @@
     }
 @endphp
 
-<article class="group relative flex items-center gap-3 {{ $padX }} py-3 transition-colors hover:bg-[color:var(--nx-hover)] {{ $real ? '' : 'opacity-70' }}">
+<article class="group relative flex items-start gap-3 {{ $padX }} py-2.5 transition-colors hover:bg-[color:var(--nx-hover)] {{ $real ? '' : 'opacity-70' }}">
 
     {{-- Unread-Akzent ganz links --}}
     @if($unread)
         <span class="absolute inset-y-0 left-0 w-0.5 bg-[color:var(--nx-accent)]"></span>
     @endif
 
-    {{-- Stretched Link: macht die ganze Zeile klickbar (echte Items) --}}
+    {{-- Stretched Link: ganze Zeile klickbar --}}
     @if($real)
         <a href="{{ route('home.inbox', ['item' => $it['inbox_id']]) }}" wire:navigate
            class="absolute inset-0" aria-label="{{ $it['subject'] ?: ($it['sender'] ?? 'Eingang') }} öffnen"></a>
     @endif
 
-    {{-- Icon --}}
-    <span class="pointer-events-none relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--nx-accent-soft)] text-[color:var(--nx-muted)]">
-        @svg($it['icon'] ?? 'heroicon-o-inbox', 'h-4 w-4')
-    </span>
-
-    {{-- Mitte: Meta-Zeile, Betreff, Vorschau — liegt über dem Link, klickt durch --}}
     <div class="pointer-events-none relative min-w-0 flex-1">
-        <div class="flex items-center gap-2 text-[11px] text-[color:var(--nx-faint)]">
-            <span class="font-medium text-[color:var(--nx-muted)]">{{ $it['channel_label'] ?? '' }}</span>
+        {{-- Zeile 1: Typ (klein, ausgeschrieben) · Absender · Zeit --}}
+        <div class="flex items-center gap-1.5 text-[11px] text-[color:var(--nx-faint)]">
+            @svg($it['icon'] ?? 'heroicon-o-inbox', 'h-3.5 w-3.5 shrink-0 text-[color:var(--nx-muted)]')
+            <span class="shrink-0 font-semibold uppercase tracking-wider text-[color:var(--nx-muted)]">{{ $type }}</span>
             @if(!empty($it['sender']))
-                <span>·</span>
+                <span class="shrink-0">·</span>
                 <span class="truncate">{{ $it['sender'] }}</span>
             @endif
             <span class="ml-auto shrink-0 tabular-nums">{{ $it['time'] ?? '' }}</span>
+            @if($unread)
+                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--nx-accent)]"></span>
+            @endif
         </div>
 
-        <div class="mt-0.5 truncate text-[14px] {{ $unread ? 'font-semibold' : 'font-medium' }} text-[color:var(--nx-text)]">
+        {{-- Zeile 2: Betreff --}}
+        <div class="mt-1 truncate text-[14px] {{ $unread ? 'font-semibold' : 'font-medium' }} text-[color:var(--nx-text)]">
             {{ $it['subject'] ?: ($it['sender'] ?? 'Eingang') }}
         </div>
 
+        {{-- Zeile 3: Vorschau --}}
         @if($teaser !== '')
             <div class="mt-0.5 truncate text-[13px] leading-relaxed text-[color:var(--nx-muted)]">{{ $teaser }}</div>
         @endif
@@ -69,7 +68,7 @@
         @endif
     </div>
 
-    {{-- Triage rechts: generisch, immer erreichbar (nicht hover-versteckt), echte inbox_id --}}
+    {{-- Triage rechts: immer erreichbar, echte inbox_id --}}
     @if($real)
         <div class="relative z-10 flex shrink-0 items-center gap-1">
             <button type="button" wire:click="markDone({{ $it['inbox_id'] }})" wire:loading.attr="disabled" title="Erledigt"

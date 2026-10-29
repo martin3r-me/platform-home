@@ -618,10 +618,28 @@ class Inbox extends Component
         $all = $this->mergedItems();
         $open = array_values(array_filter($all, fn ($it) => ($it['status'] ?? '') !== 'done'));
 
+        // Typ-Filter der Box: nur die tatsächlich vorhandenen Kanäle + „Alle".
+        $counts = ['all' => count($open)];
+        foreach ($open as $it) {
+            $ch = $it['channel'] ?? '';
+            $counts[$ch] = ($counts[$ch] ?? 0) + 1;
+        }
+        $boxChannels = array_values(array_filter(
+            $this->channels($counts),
+            fn ($c) => $c['key'] === 'all' || ($c['count'] ?? 0) > 0
+        ));
+
+        // Anzeige nach aktivem Kanal filtern (Zähler oben bleiben auf allem Offenen).
+        $display = array_values(array_filter(
+            $open,
+            fn ($it) => $this->channel === 'all' || ($it['channel'] ?? '') === $this->channel
+        ));
+
         $this->itemSubject = null;
 
         return view('home::livewire.cockpit', [
-            'items'         => $open,
+            'items'         => $display,
+            'boxChannels'   => $boxChannels,
             'eingangOpen'   => count($open),
             'eingangUnread' => count(array_filter($open, fn ($it) => !empty($it['unread']))),
             'widgets'       => $this->dashboardWidgets(),

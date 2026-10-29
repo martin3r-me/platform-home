@@ -78,13 +78,29 @@
                             Alle öffnen @svg('heroicon-o-arrow-right', 'h-3.5 w-3.5')
                         </a>
                     </header>
+                    {{-- Klare Typ-Filter: nur vorhandene Kanäle + „Alle", mit Zähler --}}
+                    @if(count($boxChannels) > 2)
+                        <div class="shrink-0 overflow-x-auto border-b border-[color:var(--nx-line)] px-3 py-1.5">
+                            <div class="flex items-center gap-1 whitespace-nowrap">
+                                @foreach($boxChannels as $c)
+                                    <button type="button" wire:click="setChannel('{{ $c['key'] }}')"
+                                            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors {{ $channel === $c['key'] ? 'bg-[color:var(--nx-active)] text-[color:var(--nx-text)]' : 'text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-hover)]' }}">
+                                        @svg($c['icon'], 'h-3 w-3 shrink-0')
+                                        {{ $c['label'] }}
+                                        <span class="tabular-nums text-[color:var(--nx-faint)]">{{ $c['count'] }}</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="min-h-0 flex-1 overflow-y-auto">
                         <div class="divide-y divide-[color:var(--nx-line)]">
                             @forelse($items as $it)
                                 @include('home::partials.inbox.card', ['it' => $it, 'dense' => true])
                             @empty
-                                <div class="flex h-full items-center justify-center px-6 py-16">
-                                    <x-nx-empty icon="heroicon-o-check-circle">Sauber — nichts Offenes im Eingang.</x-nx-empty>
+                                <div class="flex h-full items-center justify-center px-6 py-16 text-center">
+                                    <x-nx-empty icon="heroicon-o-check-circle">{{ $channel === 'all' ? 'Sauber — nichts Offenes im Eingang.' : 'Nichts in diesem Filter.' }}</x-nx-empty>
                                 </div>
                             @endforelse
                         </div>
