@@ -56,8 +56,10 @@
                 </div>
             </div>
 
-            {{-- Masonry-Raster: volle Breite, 1/2/3/4 Spalten je nach Display --}}
-            <div class="grid grid-cols-1 items-start gap-4 [grid-auto-flow:dense] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {{-- Masonry-Raster: volle Breite, 1/2/3/4 Spalten je nach Display. Echtes
+                 Packen („Kacheln rutschen ineinander") via Grid-Row-Span-Technik im
+                 Skript unten; ohne JS fällt es auf das normale Raster zurück. --}}
+            <div data-masonry class="grid grid-cols-1 items-start gap-4 [grid-auto-flow:dense] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 
                 {{-- Eingang: breiteres Tile (2 Spalten), innen scrollbar, nur offene Items --}}
                 <section class="flex h-[500px] flex-col overflow-hidden rounded-[14px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] shadow-sm sm:col-span-2">
@@ -101,4 +103,57 @@
             </div>
         </div>
     </div>
+
+    {{-- Masonry-Packer: feine Zeilen (ROW) + pro Kachel berechneter grid-row-end-Span,
+         sodass die Karten lückenlos ineinander rutschen — auch das breite Eingang-Tile.
+         items-start verhindert Stretch (kein ResizeObserver-Loop). Fehlerresistent:
+         bei jedem Fehler zurück aufs normale Raster. --}}
+    @script
+    <script>
+        (() => {
+            const ROW = 8, GAP = 16;
+            const grid = document.querySelector('[data-masonry]');
+            if (!grid) return;
+
+            const items = () => Array.from(grid.children);
+
+            function layout() {
+                try {
+                    // zurücksetzen, natürliche Höhen messen
+                    grid.style.gridAutoRows = '';
+                    grid.style.rowGap = '';
+                    const cells = items();
+                    cells.forEach((i) => { i.style.gridRowEnd = ''; });
+                    const heights = cells.map((i) => i.getBoundingClientRect().height);
+                    // feine Zeilen + Spans anwenden
+                    grid.style.gridAutoRows = ROW + 'px';
+                    grid.style.rowGap = '0px';
+                    cells.forEach((i, idx) => {
+                        const span = Math.max(1, Math.ceil((heights[idx] + GAP) / ROW));
+                        i.style.gridRowEnd = 'span ' + span;
+                    });
+                } catch (e) {
+                    grid.style.gridAutoRows = '';
+                    grid.style.rowGap = '';
+                }
+            }
+
+            let raf;
+            const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(layout); };
+
+            schedule();
+            window.addEventListener('load', schedule);
+            window.addEventListener('resize', schedule);
+
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(schedule);
+                const observe = () => items().forEach((i) => ro.observe(i));
+                observe();
+                // Nach Livewire-Morphs (Triage/To-do) neu beobachten + neu packen.
+                new MutationObserver(() => { observe(); schedule(); })
+                    .observe(grid, { childList: true, subtree: true, characterData: true });
+            }
+        })();
+    </script>
+    @endscript
 </x-ui-page>
