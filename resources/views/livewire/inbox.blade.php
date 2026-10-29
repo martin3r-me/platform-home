@@ -63,7 +63,7 @@
 
                 <span class="{{ $pill }} text-[color:var(--nx-text)]">
                     @svg('heroicon-o-inbox', 'h-3.5 w-3.5 text-[color:var(--nx-muted)]')
-                    {{ $eingangOpen }} im Eingang@if($eingangUnread > 0)<span class="text-[color:var(--nx-accent)]"> · {{ $eingangUnread }} neu</span>@endif
+                    {{ $eingangOpen }} im Eingang @if($eingangUnread > 0)<span class="text-[color:var(--nx-accent)]">· {{ $eingangUnread }} neu</span>@endif
                 </span>
 
                 @if($calendarAvailable)

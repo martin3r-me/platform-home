@@ -17,7 +17,7 @@
                         {{ $greeting }}{{ $firstName ? ', ' . $firstName : '' }}
                     </h1>
                     <p class="mt-1 text-sm text-[color:var(--nx-muted)]">
-                        {{ $dateLabel }}@if($streak > 0) · 🔥 {{ $streak }} {{ $streak === 1 ? 'Tag' : 'Tage' }} Streak@endif
+                        {{ $dateLabel }}@if($streak > 0) · 🔥 {{ $streak }} {{ $streak === 1 ? 'Tag' : 'Tage' }} Streak @endif
                     </p>
                 </div>
 

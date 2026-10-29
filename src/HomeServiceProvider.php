@@ -45,6 +45,7 @@ class HomeServiceProvider extends ServiceProvider
             PlatformCore::registerModule([
                 'key'        => 'home',
                 'title'      => 'Home',
+                'group'      => 'home',
                 'routing'    => config('home.routing'),
                 'guard'      => config('home.guard'),
                 'navigation' => config('home.navigation'),
