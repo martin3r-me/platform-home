@@ -7,8 +7,4 @@
     </div>
 
     @include('home::partials.inbox.transcript', ['segments' => $item['recording']['segments'] ?? [], 'label' => 'Aufnahme · Transcript'])
-
-    <div class="flex flex-wrap gap-2">
-        <x-nx-button variant="primary" size="sm">Als Aufgabe</x-nx-button>
-    </div>
 </div>

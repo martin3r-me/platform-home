@@ -9,12 +9,22 @@ use Illuminate\Support\Facades\Auth;
 use Platform\Core\Livewire\Concerns\HasPageContext;
 
 /**
- * Eingang – die persönliche Inbox als Herzstück von HOME (3-Pane, nx-Stil).
+ * Eingang – die persönliche Inbox als Herzstück von HOME (Cockpit-Modell, nx-Stil).
  *
- * AKTUELL: klickbarer Prototyp mit Dummy-Daten + kanal-spezifischen Reading-Panes
- * (Mail=Thread, Meeting=Agenda, Aufnahme=Transcript, Aufgabe=Properties/DoD,
- * Teams=Chat, Anruf=Anrufdaten, System=Aktion). Zwei kombinierende Filter-Achsen:
- * Kanal (links) × Status (Toggle über der Liste).
+ * STROM + KONTEXT-BAR: ein Fluss aus Kacheln (Mitte), rechts eine Kontext-Bar für
+ * die gewählte Kachel. Saubere Trennung VIEW ↔ EVENT:
+ *   · VIEW  = typ-dispatched: jede Kachel klappt ihren kanal-spezifischen Body auf
+ *             (body-dispatch → body-{mail,meeting,recording,…}). Bedeutung zuerst:
+ *             Betreff + Teaser oben, das Rohe darunter eingeklappt.
+ *   · TRIAGE-EVENTS = generisch & kachel-gebunden (Erledigt/Wiedervorlage) — der
+ *             Button reicht die (Offset-)Listen-ID durch; EINE Stream-Komponente,
+ *             keine Kachel-Komponenten.
+ *   · KONTEXT-EVENTS = typ-abhängig, in der rechten Bar an der AUSWAHL (→ Aufgabe/
+ *             Ticket echt; Antworten/Agenda folgen). „An Knoten hängen" läuft über
+ *             das globale Kontext-Panel (HasPageContext → page-context).
+ * Nur die gewählte (aufgeklappte) Kachel lädt ihr Detail nach = ein Query/Render.
+ * Filter: Kanal × Status als schlanke Leiste über dem Strom. Daten noch Hybrid
+ * (echter Stream via Core-InboxQuery + Dummies für Kanäle ohne Live-Daten).
  */
 class Inbox extends Component
 {
@@ -46,6 +56,17 @@ class Inbox extends Component
         $this->notice = '';
     }
 
+    /**
+     * Kachel auf-/zuklappen. Im Stream ist die gewählte Kachel die aufgeklappte
+     * (nur sie lädt ihr Detail nach — ein Query pro Render). Erneuter Klick auf
+     * die offene Kachel klappt sie zu und gibt den Kontext frei.
+     */
+    public function toggleItem(int $id): void
+    {
+        $this->selectedId = $this->selectedId === $id ? null : $id;
+        $this->notice = '';
+    }
+
     public function setChannel(string $channel): void
     {
         $this->channel = $channel;
@@ -63,10 +84,13 @@ class Inbox extends Component
      * listForUser zieht nur 'new', also verschwindet das Item. Knoten-Link und
      * Zeit-Buchung bleiben bestehen (MaterializeMeetingTime filtert nicht nach
      * Inbox-Status).
+     *
+     * Triage ist generisch & kachel-gebunden: der Button an JEDER Kachel reicht
+     * die (Offset-)Listen-ID durch; ohne Argument fällt es auf die Auswahl zurück.
      */
-    public function markDone(): void
+    public function markDone(?int $listId = null): void
     {
-        $id = $this->currentRealItemId();
+        $id = $this->realIdOf($listId);
         if (!$id) {
             return;
         }
@@ -76,18 +100,17 @@ class Inbox extends Component
             // still
         }
 
-        // Item ist raus → Auswahl leeren, nächster wird rechts gewählt.
-        $this->selectedId = null;
+        $this->deselectIf($listId);
     }
 
     /**
-     * Snooze: Item (samt Thread/Serie) für X Stunden aus dem Eingang nehmen.
-     * listForUser blendet Items mit snoozed_until in der Zukunft aus; danach
-     * taucht die Einheit wieder auf. Status = Snoozed (nicht „handled").
+     * Wiedervorlage (Snooze): Item (samt Thread/Serie) für X Stunden aus dem
+     * Eingang nehmen. listForUser blendet Items mit snoozed_until in der Zukunft
+     * aus; danach taucht die Einheit wieder auf. Status = Snoozed (nicht „handled").
      */
-    public function snooze(int $hours = 4): void
+    public function snooze(int $hours = 4, ?int $listId = null): void
     {
-        $id = $this->currentRealItemId();
+        $id = $this->realIdOf($listId);
         if (!$id) {
             return;
         }
@@ -97,7 +120,15 @@ class Inbox extends Component
             // still
         }
 
-        $this->selectedId = null;
+        $this->deselectIf($listId);
+    }
+
+    /** Nach einer Triage die Auswahl leeren, wenn die triagierte Kachel die gewählte war. */
+    protected function deselectIf(?int $listId): void
+    {
+        if ($listId === null || $listId === $this->selectedId) {
+            $this->selectedId = null;
+        }
     }
 
     /**
@@ -150,7 +181,7 @@ class Inbox extends Component
     /** Gemeinsamer Handoff-Aufruf für → Aufgabe / → Ticket. */
     protected function handoff(string $target, string $okMessage): void
     {
-        $id = $this->currentRealItemId();
+        $id = $this->realIdOf();
         if (!$id) {
             return;
         }
@@ -167,16 +198,17 @@ class Inbox extends Component
     }
 
     /**
-     * Reale Inbox-Item-ID des aktuell gewählten Items (oder null bei Dummy/keins).
-     * Echte Items liegen im ID-Raum ab 10000 (Kanal-Offset je 10000) — die reale
-     * inbox_id ist der Rest modulo 10000.
+     * Reale Inbox-Item-ID zu einer (Offset-)Listen-ID — oder, ohne Argument, zur
+     * aktuellen Auswahl. Dummy/keins → null. Echte Items liegen im ID-Raum ab
+     * 10000 (Kanal-Offset je 10000); die reale inbox_id ist der Rest modulo 10000.
      */
-    protected function currentRealItemId(): ?int
+    protected function realIdOf(?int $listId = null): ?int
     {
-        if (!$this->selectedId || $this->selectedId < 10000) {
+        $listId ??= $this->selectedId;
+        if (!$listId || $listId < 10000) {
             return null;
         }
-        return $this->selectedId % 10000;
+        return $listId % 10000;
     }
 
 

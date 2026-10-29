@@ -42,10 +42,9 @@
 
     @include('home::partials.inbox.transcript', ['segments' => $item['recording']['segments'] ?? [], 'label' => 'Aufnahme · Transcript'])
 
-    <div class="flex flex-wrap gap-2">
-        @if(!empty($item['join_url']))
+    @if(!empty($item['join_url']))
+        <div>
             <x-nx-button variant="secondary" size="sm" :href="$item['join_url']">Teams öffnen</x-nx-button>
-        @endif
-        <x-nx-button variant="ghost" size="sm">Protokoll</x-nx-button>
-    </div>
+        </div>
+    @endif
 </div>
