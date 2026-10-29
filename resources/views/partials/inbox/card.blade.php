@@ -10,6 +10,9 @@
     $padX   = ($dense ?? false) ? 'px-4' : 'px-6';
     $type   = mb_strtoupper(trim((string) ($it['channel_label'] ?? 'Eingang')));
 
+    $selectable = ($selectable ?? false) && $real;
+    $isSelected = $selectable && in_array((string) ($it['inbox_id'] ?? ''), array_map('strval', (array) ($selected ?? [])), true);
+
     $badges = collect();
     if (!empty($it['is_series'])) $badges->push(['heroicon-o-arrow-path', 'Serie' . (($it['series_count'] ?? 1) > 1 ? ' · ' . $it['series_count'] : '')]);
     if (!empty($it['is_thread'])) $badges->push(['heroicon-o-chat-bubble-left-right', 'Thread · ' . ($it['thread_count'] ?? 1)]);
@@ -19,7 +22,7 @@
     }
 @endphp
 
-<article class="group relative flex items-start gap-3 {{ $padX }} py-2.5 transition-colors hover:bg-[color:var(--nx-hover)] {{ $real ? '' : 'opacity-70' }}">
+<article class="group relative flex items-start gap-3 {{ $padX }} py-2.5 transition-colors {{ $isSelected ? 'bg-[color:var(--nx-accent-soft)]' : 'hover:bg-[color:var(--nx-hover)]' }} {{ $real ? '' : 'opacity-70' }}">
 
     {{-- Unread-Akzent ganz links --}}
     @if($unread)
@@ -30,6 +33,15 @@
     @if($real)
         <a href="{{ route('home.inbox', ['item' => $it['inbox_id']]) }}" wire:navigate
            class="absolute inset-0" aria-label="{{ $it['subject'] ?: ($it['sender'] ?? 'Eingang') }} öffnen"></a>
+    @endif
+
+    {{-- Auswahl-Checkbox (nur im Stream, über dem Link) --}}
+    @if($selectable)
+        <label class="relative z-10 mt-0.5 flex shrink-0 cursor-pointer items-center">
+            <input type="checkbox" wire:model.live="selected" value="{{ $it['inbox_id'] }}"
+                   class="h-4 w-4 cursor-pointer rounded border-[color:var(--nx-line-strong,var(--nx-line))]"
+                   style="accent-color: var(--nx-accent);" aria-label="Auswählen">
+        </label>
     @endif
 
     <div class="pointer-events-none relative min-w-0 flex-1">

@@ -56,8 +56,11 @@ class Inbox extends Component
     /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
     public string $notice = '';
 
-    /** Letzte Triage für das Undo-Toast: ['id'=>int, 'label'=>string] oder null. */
+    /** Letzte Triage für das Undo-Toast: ['ids'=>int[], 'label'=>string] oder null. */
     public ?array $lastTriage = null;
+
+    /** Ausgewählte inbox_ids für Massenaktionen im Stream (wire:model). */
+    public array $selected = [];
 
     /** Betreff des Detail-Items als Seitenkontext — siehe pageContext(). */
     protected ?string $itemSubject = null;
@@ -127,16 +130,82 @@ class Inbox extends Component
      */
     public function undoTriage(): void
     {
-        if (! $this->lastTriage) {
+        $ids = $this->lastTriage['ids'] ?? [];
+        if (! $ids) {
             return;
         }
         try {
-            app(\Platform\Core\Inbox\Services\TriageService::class)->reopen((int) $this->lastTriage['id']);
+            $svc = app(\Platform\Core\Inbox\Services\TriageService::class);
+            foreach ($ids as $id) {
+                $svc->reopen((int) $id);
+            }
         } catch (\Throwable $e) {
             // still
         }
         $this->lastTriage = null;
         $this->dispatch('inbox-undone');
+    }
+
+    /** Alle sichtbaren (gefilterten, echten) Items auswählen. */
+    public function selectAll(): void
+    {
+        $all = $this->mergedItems();
+        $this->selected = array_values(array_unique(array_map(
+            fn ($it) => (int) $it['inbox_id'],
+            array_filter($all, fn ($it) => ($it['real'] ?? false) && $this->matches($it))
+        )));
+    }
+
+    /** Auswahl aufheben. */
+    public function clearSelection(): void
+    {
+        $this->selected = [];
+    }
+
+    /** Massenaktion: Erledigt auf alle ausgewählten Einheiten. */
+    public function bulkDone()
+    {
+        return $this->bulk(fn ($s, $id) => $s->markDone($id), 'erledigt');
+    }
+
+    /** Massenaktion: Ignorieren auf alle ausgewählten Einheiten. */
+    public function bulkIgnore()
+    {
+        return $this->bulk(fn ($s, $id) => $s->ignore($id), 'ignoriert');
+    }
+
+    /** Massenaktion: Wiedervorlage auf alle ausgewählten Einheiten. */
+    public function bulkSnooze(int $hours = 4)
+    {
+        return $this->bulk(fn ($s, $id) => $s->snooze($id, max(1, $hours)), 'auf Wiedervorlage');
+    }
+
+    /**
+     * Gemeinsamer Massen-Triage-Lauf über alle ausgewählten inbox_ids (jede Aktion
+     * wirkt ohnehin auf die ganze Einheit; Duplikate sind idempotent). Merkt die
+     * Menge fürs Bulk-Undo, feuert das Toast und hebt die Auswahl auf.
+     */
+    protected function bulk(callable $op, string $verb)
+    {
+        $ids = array_values(array_unique(array_map('intval', $this->selected)));
+        if (! $ids) {
+            return null;
+        }
+
+        try {
+            $svc = app(\Platform\Core\Inbox\Services\TriageService::class);
+            foreach ($ids as $id) {
+                $op($svc, $id);
+            }
+            $this->lastTriage = ['ids' => $ids, 'label' => count($ids) . ' ' . $verb];
+            $this->dispatch('inbox-triaged', label: count($ids) . ' ' . $verb);
+        } catch (\Throwable $e) {
+            // still
+        }
+
+        $this->selected = [];
+
+        return null;
     }
 
     /**
@@ -148,7 +217,7 @@ class Inbox extends Component
     {
         try {
             $op(app(\Platform\Core\Inbox\Services\TriageService::class));
-            $this->lastTriage = ['id' => $itemId, 'label' => $label];
+            $this->lastTriage = ['ids' => [$itemId], 'label' => $label];
             $this->dispatch('inbox-triaged', label: $label);
         } catch (\Throwable $e) {
             // still

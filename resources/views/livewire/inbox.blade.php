@@ -105,6 +105,47 @@
             </div>
         </div>
 
+        {{-- Massenaktion: erscheint, sobald etwas ausgewählt ist --}}
+        @if(count($selected) > 0)
+            <div class="shrink-0 border-b border-[color:var(--nx-line)] bg-[color:var(--nx-accent-soft)]">
+                <div class="flex flex-wrap items-center gap-2 px-6 py-2">
+                    <span class="text-sm font-semibold text-[color:var(--nx-text)]">{{ count($selected) }} ausgewählt</span>
+
+                    <button type="button" wire:click="selectAll" class="text-xs font-medium text-[color:var(--nx-muted)] hover:text-[color:var(--nx-text)]">Alle auswählen</button>
+                    <button type="button" wire:click="clearSelection" class="text-xs font-medium text-[color:var(--nx-muted)] hover:text-[color:var(--nx-text)]">Aufheben</button>
+
+                    <span class="mx-1 h-4 w-px bg-[color:var(--nx-line)]"></span>
+
+                    <button type="button" wire:click="bulkDone" wire:loading.attr="disabled"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--nx-text)] transition-colors hover:border-[color:var(--nx-success)] hover:text-[color:var(--nx-success)]">
+                        @svg('heroicon-o-check', 'h-3.5 w-3.5') Erledigt
+                    </button>
+
+                    <button type="button" wire:click="bulkIgnore" wire:loading.attr="disabled"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--nx-text)] transition-colors hover:border-[color:var(--nx-danger,var(--nx-line))] hover:text-[color:var(--nx-danger,var(--nx-text))]">
+                        @svg('heroicon-o-eye-slash', 'h-3.5 w-3.5') Ignorieren
+                    </button>
+
+                    <div x-data="{ open: false }" class="relative">
+                        <button type="button" @click="open = !open"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--nx-text)] transition-colors hover:border-[color:var(--nx-accent)]">
+                            @svg('heroicon-o-clock', 'h-3.5 w-3.5') Wiedervorlage
+                        </button>
+                        <div x-show="open" x-cloak @click.outside="open = false" x-transition.opacity.duration.100ms
+                             class="absolute left-0 z-30 mt-1 w-44 overflow-hidden rounded-[10px] border border-[color:var(--nx-line)] bg-[color:var(--nx-surface)] py-1 shadow-sm">
+                            @foreach(['In 1 Stunde' => 1, 'Heute Abend' => 8, 'Morgen früh' => 20, 'Nächste Woche' => 168] as $label => $h)
+                                <button type="button" wire:click="bulkSnooze({{ $h }})" @click="open = false"
+                                        class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-[color:var(--nx-text)] hover:bg-[color:var(--nx-hover)]">
+                                    @svg('heroicon-o-clock', 'h-3.5 w-3.5 shrink-0 text-[color:var(--nx-faint)]')
+                                    {{ $label }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         {{-- Der Strom: eine durchlaufende, geteilte Liste über die ganze Breite --}}
         <div class="min-h-0 flex-1 overflow-y-auto">
             @php($prevSection = null)
@@ -116,7 +157,7 @@
                             {{ $it['section'] === 'upcoming' ? 'Anstehend' : 'Vergangen' }}
                         </div>
                     @endif
-                    @include('home::partials.inbox.card', ['it' => $it])
+                    @include('home::partials.inbox.card', ['it' => $it, 'selectable' => true, 'selected' => $selected])
                 @empty
                     <div class="px-6 py-16">
                         <x-nx-empty icon="heroicon-o-check-circle">Nichts hier — sauber.</x-nx-empty>
