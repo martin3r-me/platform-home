@@ -162,6 +162,28 @@ class Inbox extends Component
         $this->selected = [];
     }
 
+    /**
+     * Backlog: ALLE offenen Items (bei aktivem Typ-Filter nur diesen Kanal) in einem
+     * Rutsch auf Erledigt — für „2000 Mails abräumen". Kein Undo (vorher bestätigen).
+     */
+    public function markAllDone(): void
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->currentTeam) {
+            return;
+        }
+        $channel = $this->channel === 'all' ? null : $this->channel;
+        try {
+            $n = app(\Platform\Core\Inbox\Services\TriageService::class)
+                ->markAllDoneForUser($user->id, $user->currentTeam->id, $channel);
+            $this->selected = [];
+            $this->lastTriage = null;
+            $this->dispatch('inbox-triaged', label: $n . ' erledigt', undoable: false);
+        } catch (\Throwable $e) {
+            // still
+        }
+    }
+
     /** Massenaktion: Erledigt auf alle ausgewählten Einheiten. */
     public function bulkDone()
     {
@@ -340,6 +362,7 @@ class Inbox extends Component
         return [
             ['key' => 'mail',      'label' => 'E-Mail',   'icon' => 'heroicon-o-envelope'],
             ['key' => 'meeting',   'label' => 'Meeting',  'icon' => 'heroicon-o-calendar-days'],
+            ['key' => 'message',   'label' => 'Teams',    'icon' => 'heroicon-o-chat-bubble-left'],
             ['key' => 'call',      'label' => 'Anruf',    'icon' => 'heroicon-o-phone'],
             ['key' => 'task',      'label' => 'Aufgabe',  'icon' => 'heroicon-o-clipboard-document-check'],
             ['key' => 'ticket',    'label' => 'Ticket',   'icon' => 'heroicon-o-lifebuoy'],
@@ -598,6 +621,19 @@ class Inbox extends Component
                 'unread'        => true,
                 'status'        => 'new',
             ],
+            'message' => [
+                'id'            => 70000 + $inboxId,
+                'inbox_id'      => $inboxId,
+                'real'          => true,
+                'channel'       => 'message',
+                'channel_label' => 'Teams',
+                'icon'          => 'heroicon-o-chat-bubble-left',
+                'sender'        => $m['sender_label'] ?? ($m['sender'] ?? 'Teams'),
+                'subject'       => $m['subject'] ?? '',
+                'preview'       => $m['preview'] ?? '',
+                'time'          => $this->recTime($m['received_at'] ?? null),
+                'status'        => 'new',
+            ],
             default => null,
         };
     }
@@ -830,10 +866,16 @@ class Inbox extends Component
 
         $this->itemSubject = null;
 
+        // Wie viele „Alle erledigt" betreffen würde (aktiver Kanal bzw. alles).
+        $markAllCount = $this->channel === 'all'
+            ? (int) ($counts['all'] ?? 0)
+            : (int) ($counts[$this->channel] ?? 0);
+
         return view('home::livewire.inbox', [
-            'channels'    => $this->channels($counts),
-            'items'       => $filtered,
-            'eingangOpen' => (int) ($counts['all'] ?? 0),
+            'channels'     => $this->channels($counts),
+            'items'        => $filtered,
+            'eingangOpen'  => (int) ($counts['all'] ?? 0),
+            'markAllCount' => $markAllCount,
         ])->layout('platform::layouts.app');
     }
 

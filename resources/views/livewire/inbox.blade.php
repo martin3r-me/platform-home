@@ -96,6 +96,28 @@
                         @endif
                     </button>
                 @endforeach
+
+                {{-- Backlog aufräumen: alles (bzw. aktiven Typ) als erledigt --}}
+                @if($markAllCount > 0)
+                    <div x-data="{ confirm: false }" class="ml-auto shrink-0">
+                        <button type="button" x-show="!confirm" @click="confirm = true"
+                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[color:var(--nx-muted)] transition-colors hover:bg-[color:var(--nx-hover)] hover:text-[color:var(--nx-text)]">
+                            @svg('heroicon-o-check-circle', 'h-3.5 w-3.5')
+                            Alle erledigt
+                        </button>
+                        <div x-show="confirm" x-cloak class="flex items-center gap-1.5">
+                            <span class="text-xs text-[color:var(--nx-muted)]">{{ $markAllCount }} als erledigt?</span>
+                            <button type="button" wire:click="markAllDone" @click="confirm = false" wire:loading.attr="disabled"
+                                    class="rounded-md bg-[color:var(--nx-text)] px-2.5 py-1 text-xs font-medium text-[color:var(--nx-on-accent)] hover:opacity-90">
+                                Ja, alle
+                            </button>
+                            <button type="button" @click="confirm = false"
+                                    class="rounded-md px-2 py-1 text-xs font-medium text-[color:var(--nx-muted)] hover:bg-[color:var(--nx-hover)]">
+                                Abbrechen
+                            </button>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 

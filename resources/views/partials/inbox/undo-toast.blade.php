@@ -1,8 +1,8 @@
 {{-- Undo-Toast: erscheint nach einer Triage (Erledigt/Ignoriert/Wiedervorlage),
      bietet „Rückgängig" (wire:click undoTriage → reopen). Hört auf die vom
      Inbox-Component gefeuerten Livewire-Browser-Events; auto-hide nach 6s. --}}
-<div x-data="{ show: false, label: '', timer: null }"
-     x-on:inbox-triaged.window="label = ($event.detail && $event.detail.label) ? $event.detail.label : 'Erledigt'; show = true; clearTimeout(timer); timer = setTimeout(() => show = false, 6000)"
+<div x-data="{ show: false, label: '', undoable: true, timer: null }"
+     x-on:inbox-triaged.window="label = ($event.detail && $event.detail.label) ? $event.detail.label : 'Erledigt'; undoable = !($event.detail && $event.detail.undoable === false); show = true; clearTimeout(timer); timer = setTimeout(() => show = false, 6000)"
      x-on:inbox-undone.window="show = false; clearTimeout(timer)"
      x-show="show" x-cloak
      x-transition:enter="transition ease-out duration-150"
@@ -17,7 +17,7 @@
         @svg('heroicon-o-check-circle', 'h-4 w-4 shrink-0')
         <span x-text="label"></span>
     </span>
-    <button type="button" wire:click="undoTriage" @click="show = false; clearTimeout(timer)"
+    <button type="button" x-show="undoable" wire:click="undoTriage" @click="show = false; clearTimeout(timer)"
             class="rounded-full px-3 py-1 text-sm font-semibold transition-colors hover:bg-white/15">
         Rückgängig
     </button>
