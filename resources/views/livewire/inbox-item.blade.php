@@ -55,6 +55,11 @@
                             @endforeach
                         </div>
                     </div>
+                    <button type="button" wire:click="ignore({{ (int) $item['inbox_id'] }})" wire:loading.attr="disabled"
+                            title="Ignorieren – dauerhaft ausblenden"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--nx-line)] px-3 py-1.5 text-sm font-medium text-[color:var(--nx-muted)] hover:border-[color:var(--nx-danger,var(--nx-line))] hover:bg-[color:var(--nx-hover)] hover:text-[color:var(--nx-danger,var(--nx-text))]">
+                        @svg('heroicon-o-eye-slash', 'h-4 w-4') Ignorieren
+                    </button>
 
                     <span class="mx-1 h-5 w-px bg-[color:var(--nx-line)]"></span>
 

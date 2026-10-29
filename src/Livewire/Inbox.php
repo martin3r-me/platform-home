@@ -56,6 +56,9 @@ class Inbox extends Component
     /** Kurze Rückmeldung nach einer Aktion (z. B. „Aufgabe angelegt."). */
     public string $notice = '';
 
+    /** Letzte Triage für das Undo-Toast: ['id'=>int, 'label'=>string] oder null. */
+    public ?array $lastTriage = null;
+
     /** Betreff des Detail-Items als Seitenkontext — siehe pageContext(). */
     protected ?string $itemSubject = null;
 
@@ -97,7 +100,16 @@ class Inbox extends Component
      */
     public function markDone(int $itemId)
     {
-        return $this->triage(fn ($s) => $s->markDone($itemId));
+        return $this->triage($itemId, fn ($s) => $s->markDone($itemId), 'Erledigt');
+    }
+
+    /**
+     * Ignorieren: dauerhaft wegdrücken (Status = Ignored) — raus aus dem Eingang,
+     * ohne „erledigt". Umkehrbar via Undo (reopen).
+     */
+    public function ignore(int $itemId)
+    {
+        return $this->triage($itemId, fn ($s) => $s->ignore($itemId), 'Ignoriert');
     }
 
     /**
@@ -106,17 +118,38 @@ class Inbox extends Component
      */
     public function snooze(int $itemId, int $hours = 4)
     {
-        return $this->triage(fn ($s) => $s->snooze($itemId, max(1, $hours)));
+        return $this->triage($itemId, fn ($s) => $s->snooze($itemId, max(1, $hours)), 'Auf Wiedervorlage');
     }
 
     /**
-     * Gemeinsamer Triage-Lauf: Service best-effort anwenden; aus der Detail-View
-     * zurück in den Stream navigieren (das Item ist dort ohnehin weg).
+     * Rückgängig (Undo): die zuletzt triagierte Einheit zurück in den offenen
+     * Eingang holen (reopen → Status New). Wird vom Undo-Toast aufgerufen.
      */
-    protected function triage(callable $op)
+    public function undoTriage(): void
+    {
+        if (! $this->lastTriage) {
+            return;
+        }
+        try {
+            app(\Platform\Core\Inbox\Services\TriageService::class)->reopen((int) $this->lastTriage['id']);
+        } catch (\Throwable $e) {
+            // still
+        }
+        $this->lastTriage = null;
+        $this->dispatch('inbox-undone');
+    }
+
+    /**
+     * Gemeinsamer Triage-Lauf: Service best-effort anwenden, die Aktion für das Undo
+     * merken + Toast-Event feuern; aus der Detail-View zurück in den Stream navigieren
+     * (das Item ist dort ohnehin weg).
+     */
+    protected function triage(int $itemId, callable $op, string $label)
     {
         try {
             $op(app(\Platform\Core\Inbox\Services\TriageService::class));
+            $this->lastTriage = ['id' => $itemId, 'label' => $label];
+            $this->dispatch('inbox-triaged', label: $label);
         } catch (\Throwable $e) {
             // still
         }

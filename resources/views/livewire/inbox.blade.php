@@ -125,4 +125,6 @@
             </div>
         </div>
     </div>
+
+    @include('home::partials.inbox.undo-toast')
 </x-ui-page>

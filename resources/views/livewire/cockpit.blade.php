@@ -120,6 +120,8 @@
         </div>
     </div>
 
+    @include('home::partials.inbox.undo-toast')
+
     {{-- Masonry-Packer: feine Zeilen (ROW) + pro Kachel berechneter grid-row-end-Span,
          sodass die Karten lückenlos ineinander rutschen — auch das breite Eingang-Tile.
          items-start verhindert Stretch (kein ResizeObserver-Loop). Fehlerresistent:

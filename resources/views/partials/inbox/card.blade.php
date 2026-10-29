@@ -80,6 +80,12 @@
                 <span class="whitespace-nowrap">Erledigt</span>
             </button>
 
+            <button type="button" wire:click="ignore({{ $it['inbox_id'] }})" wire:loading.attr="disabled"
+                    title="Ignorieren – dauerhaft ausblenden"
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[color:var(--nx-line)] text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-danger,var(--nx-muted))] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-danger,var(--nx-text))]">
+                @svg('heroicon-o-eye-slash', 'h-3.5 w-3.5')
+            </button>
+
             <div x-data="{ open: false }" class="relative">
                 <button type="button" @click="open = !open" title="Wiedervorlage – später erneut vorlegen"
                         class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[color:var(--nx-line)] text-[color:var(--nx-muted)] transition-colors hover:border-[color:var(--nx-accent)] hover:bg-[color:var(--nx-active)] hover:text-[color:var(--nx-text)]">
