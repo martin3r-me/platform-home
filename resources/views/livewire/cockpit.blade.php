@@ -69,7 +69,7 @@
                             Eingang
                             @if($eingangOpen > 0)
                                 <span class="rounded-full bg-[color:var(--nx-accent-soft)] px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-[color:var(--nx-muted)]">
-                                    {{ $eingangOpen }}@if($eingangUnread > 0) · {{ $eingangUnread }} neu @endif
+                                    {{ $eingangOpen }}
                                 </span>
                             @endif
                         </h2>

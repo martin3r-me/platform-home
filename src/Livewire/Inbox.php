@@ -460,7 +460,7 @@ class Inbox extends Component
         }
 
         try {
-            $rows = app($contract)->listStreamForUser($user->id, $user->currentTeam->id, 25);
+            $rows = app($contract)->listStreamForUser($user->id, $user->currentTeam->id, 50);
         } catch (\Throwable $e) {
             return [];
         }
@@ -604,16 +604,9 @@ class Inbox extends Component
     /** Die gemergte Gesamtliste (echte Items + Dummies), ungefiltert. */
     protected function mergedItems(): array
     {
-        $all = $this->items();
-        $real = $this->realStream();
-
-        // Dummies der Kanäle, für die es echte Items gibt, raus; echte davor.
-        $realChannels = array_unique(array_filter(array_map(fn ($it) => $it['channel'] ?? null, $real)));
-        if ($realChannels) {
-            $all = array_values(array_filter($all, fn ($it) => !in_array($it['channel'] ?? '', $realChannels, true)));
-        }
-
-        return $this->consolidateUnits(array_merge($real, $all));
+        // Nur echte Items aus dem Core-Stream. KEINE Dummies mehr (sie verfälschten
+        // Inhalt + Zähler). items() bleibt als Vorlage, wird aber nicht mehr gemischt.
+        return $this->consolidateUnits($this->realStream());
     }
 
     /**
@@ -717,15 +710,11 @@ class Inbox extends Component
      */
     protected function renderDashboard()
     {
-        $all = $this->mergedItems();
-        $open = array_values(array_filter($all, fn ($it) => ($it['status'] ?? '') !== 'done'));
+        $open = array_values(array_filter($this->mergedItems(), fn ($it) => ($it['status'] ?? '') !== 'done'));
 
-        // Typ-Filter der Box: nur die tatsächlich vorhandenen Kanäle + „Alle".
-        $counts = ['all' => count($open)];
-        foreach ($open as $it) {
-            $ch = $it['channel'] ?? '';
-            $counts[$ch] = ($counts[$ch] ?? 0) + 1;
-        }
+        // ECHTE Zähler aus inbox_items (ungekappt), nicht aus der pro Kanal
+        // limitierten Stream-Liste — sonst stimmen die Badges nicht.
+        $counts = $this->openCounts();
         $boxChannels = array_values(array_filter(
             $this->channels($counts),
             fn ($c) => $c['key'] === 'all' || ($c['count'] ?? 0) > 0
@@ -740,12 +729,33 @@ class Inbox extends Component
         $this->itemSubject = null;
 
         return view('home::livewire.cockpit', [
-            'items'         => $display,
-            'boxChannels'   => $boxChannels,
-            'eingangOpen'   => count($open),
-            'eingangUnread' => count(array_filter($open, fn ($it) => !empty($it['unread']))),
-            'widgets'       => $this->dashboardWidgets(),
+            'items'       => $display,
+            'boxChannels' => $boxChannels,
+            'eingangOpen' => (int) ($counts['all'] ?? count($open)),
+            'widgets'     => $this->dashboardWidgets(),
         ])->layout('platform::layouts.app');
+    }
+
+    /**
+     * Echte offene Zähler des Eingangs (pro Kanal + Summe) aus inbox_items über den
+     * Core-Kontrakt — unabhängig vom limitierten Stream. ['all'=>int, '<ch>'=>int,…].
+     *
+     * @return array<string,int>
+     */
+    protected function openCounts(): array
+    {
+        $contract = \Platform\Core\Inbox\Contracts\InboxQuery::class;
+        $user = Auth::user();
+        if (! interface_exists($contract) || ! $user || ! $user->currentTeam) {
+            return ['all' => 0];
+        }
+        try {
+            $counts = app($contract)->openCountsForUser($user->id, $user->currentTeam->id);
+
+            return is_array($counts) ? $counts : ['all' => 0];
+        } catch (\Throwable $e) {
+            return ['all' => 0];
+        }
     }
 
     /**
@@ -782,28 +792,19 @@ class Inbox extends Component
     {
         $all = $this->mergedItems();
 
-        // Kanal-Counts aus der tatsächlichen Liste — Zahl und Inhalt passen immer zusammen.
-        $counts = ['all' => count($all)];
-        foreach ($all as $it) {
-            $ch = $it['channel'] ?? '';
-            $counts[$ch] = ($counts[$ch] ?? 0) + 1;
-        }
+        // ECHTE Kanal-Counts aus inbox_items (ungekappt) — die Stream-Liste ist pro
+        // Kanal bei 50 begrenzt, taugt also nicht als Zähler.
+        $counts = $this->openCounts();
 
         $filtered = array_values(array_filter($all, fn ($it) => $this->matches($it)));
-
-        // Eingang-Zähler für die „Heute"-Schiene — aus derselben Liste, damit Zahl
-        // und Strom immer zusammenpassen (unabhängig vom aktiven Filter).
-        $eingangOpen = count(array_filter($all, fn ($it) => ($it['status'] ?? '') !== 'done'));
-        $eingangUnread = count(array_filter($all, fn ($it) => !empty($it['unread'])));
 
         $this->itemSubject = null;
 
         return view('home::livewire.inbox', [
-            'channels'      => $this->channels($counts),
-            'statuses'      => $this->statuses(),
-            'items'         => $filtered,
-            'eingangOpen'   => $eingangOpen,
-            'eingangUnread' => $eingangUnread,
+            'channels'    => $this->channels($counts),
+            'statuses'    => $this->statuses(),
+            'items'       => $filtered,
+            'eingangOpen' => (int) ($counts['all'] ?? 0),
         ])->layout('platform::layouts.app');
     }
 

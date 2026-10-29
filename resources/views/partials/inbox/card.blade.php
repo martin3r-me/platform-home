@@ -6,7 +6,6 @@
 @php
     $real   = (bool) ($it['real'] ?? false);
     $teaser = trim((string) ($it['summary'] ?? $it['preview'] ?? ''));
-    $unread = !empty($it['unread']);
     $padX   = ($dense ?? false) ? 'px-4' : 'px-6';
     $type   = mb_strtoupper(trim((string) ($it['channel_label'] ?? 'Eingang')));
 
@@ -23,11 +22,6 @@
 @endphp
 
 <article class="group relative flex items-start gap-3 {{ $padX }} py-2.5 transition-colors {{ $isSelected ? 'bg-[color:var(--nx-accent-soft)]' : 'hover:bg-[color:var(--nx-hover)]' }} {{ $real ? '' : 'opacity-70' }}">
-
-    {{-- Unread-Akzent ganz links --}}
-    @if($unread)
-        <span class="absolute inset-y-0 left-0 w-0.5 bg-[color:var(--nx-accent)]"></span>
-    @endif
 
     {{-- Stretched Link: ganze Zeile klickbar --}}
     @if($real)
@@ -54,13 +48,10 @@
                 <span class="truncate">{{ $it['sender'] }}</span>
             @endif
             <span class="ml-auto shrink-0 tabular-nums">{{ $it['time'] ?? '' }}</span>
-            @if($unread)
-                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--nx-accent)]"></span>
-            @endif
         </div>
 
         {{-- Zeile 2: Betreff --}}
-        <div class="mt-1 truncate text-[14px] {{ $unread ? 'font-semibold' : 'font-medium' }} text-[color:var(--nx-text)]">
+        <div class="mt-1 truncate text-[14px] font-medium text-[color:var(--nx-text)]">
             {{ $it['subject'] ?: ($it['sender'] ?? 'Eingang') }}
         </div>
 
